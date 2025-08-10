@@ -1,0 +1,22 @@
+{
+  "name": "pacificdragons/pds-seating-planner",
+  "description": "Pds Dragonboat Seat Planner",
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "acf"
+  ],
+  "homepage": "https://github.com/pacificdragons/pds-seating-planner.git",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Simon Douglas",
+      "email": "si@simondouglas.com",
+      "homepage": "http://simondouglas.com"
+    }
+  ],
+  "type": "wordpress-plugin",
+  "require": {
+    "composer/installers": "^1.0.6"
+  }
+}

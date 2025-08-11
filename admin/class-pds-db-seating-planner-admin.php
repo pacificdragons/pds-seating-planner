@@ -97,6 +97,9 @@ class Pds_Db_Seating_Planner_Admin {
 		 */
 
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/pds-db-seating-planner-admin.js', array( 'jquery', 'jquery-ui-draggable', 'jquery-ui-droppable' ), $this->version, false );
+		
+		// Enqueue jQuery UI Touch Punch for mobile support
+		wp_enqueue_script( 'jquery-ui-touch-punch', 'https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js', array( 'jquery-ui-core' ), '0.2.3', false );
 
 	}
 

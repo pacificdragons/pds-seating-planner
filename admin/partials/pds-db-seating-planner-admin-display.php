@@ -64,43 +64,75 @@
 
 <script type="text/javascript">
 jQuery(document).ready(function($) {
-	var seatingData = [];
+	var seatingData = {
+		boats: [],
+		metadata: {
+			boat2Visible: null // null = auto (based on paddler count), true/false = user preference
+		}
+	};
 	var totalPaddlers = $('.paddler-item').length;
-	var boatCount = totalPaddlers > 20 ? 2 : 1;
+	var defaultBoatCount = totalPaddlers > 20 ? 2 : 1;
+	var actualBoatCount = defaultBoatCount;
 	
-	// Initialize boats
-	initializeBoats(boatCount);
-	
-	// Setup global controls based on boat count
-	setupGlobalControls(boatCount);
-	
-	// Load existing seating data
+	// Load existing seating data first
 	var existingData = $('#seating-plan-data').val();
 	if (existingData) {
 		try {
 			var loadedData = JSON.parse(existingData);
 			// Handle backward compatibility - convert old format to new format
-			if (loadedData && !Array.isArray(loadedData)) {
-				seatingData = [loadedData]; // Convert single boat object to array
-			} else if (Array.isArray(loadedData)) {
+			if (loadedData && Array.isArray(loadedData)) {
+				// Old array format - convert to new structure
+				seatingData.boats = loadedData;
+				seatingData.metadata.boat2Visible = null; // Use default behavior
+			} else if (loadedData && !Array.isArray(loadedData) && !loadedData.boats) {
+				// Very old single boat format - convert to new structure
+				seatingData.boats = [loadedData];
+				seatingData.metadata.boat2Visible = null;
+			} else if (loadedData && loadedData.boats) {
+				// New format - use as is
 				seatingData = loadedData;
 			}
-			loadSeatingArrangement();
 		} catch (e) {
 			console.log('Error parsing existing seating data');
 		}
 	}
 	
-	// Ensure we have the right number of boat objects
-	while (seatingData.length < boatCount) {
-		seatingData.push({});
+	// Determine actual boat count based on user preference or default
+	if (seatingData.metadata.boat2Visible === false) {
+		actualBoatCount = 1; // User explicitly hid boat 2
+	} else if (seatingData.metadata.boat2Visible === true) {
+		actualBoatCount = 2; // User explicitly wants boat 2
+	} else {
+		actualBoatCount = defaultBoatCount; // Use default based on paddler count
 	}
 	
-	// Make paddler items draggable
+	// Initialize boats
+	initializeBoats(actualBoatCount);
+	
+	// Setup global controls based on boat count
+	setupGlobalControls(actualBoatCount);
+	
+	// Ensure we have the right number of boat objects
+	while (seatingData.boats.length < actualBoatCount) {
+		seatingData.boats.push({});
+	}
+	
+	// Load seating arrangement
+	if (existingData) {
+		loadSeatingArrangement();
+	}
+	
+	// Update global reference for other functions
+	boatCount = actualBoatCount;
+	
+	// Make paddler items draggable with touch support
 	$('.paddler-item').draggable({
 		revert: 'invalid',
 		helper: 'clone',
-		zIndex: 1000
+		zIndex: 1000,
+		scroll: false,
+		distance: 5, // Minimum distance to start drag (helpful for touch)
+		delay: 100   // Short delay to prevent accidental drags
 	});
 	
 	function initializeBoats(count) {
@@ -108,7 +140,7 @@ jQuery(document).ready(function($) {
 		boatsContainer.empty();
 		
 		for (var i = 0; i < count; i++) {
-			var boatHtml = createBoatHTML(i);
+			var boatHtml = createBoatHTML(i, count);
 			boatsContainer.append(boatHtml);
 		}
 		
@@ -116,8 +148,8 @@ jQuery(document).ready(function($) {
 		initializeDragDrop();
 	}
 	
-	function createBoatHTML(boatIndex) {
-		var boatTitle = boatCount > 1 ? 'Boat ' + (boatIndex + 1) : '';
+	function createBoatHTML(boatIndex, totalBoats) {
+		var boatTitle = totalBoats > 1 ? 'Boat ' + (boatIndex + 1) : '';
 		var boatHtml = '<div class="boat-container" data-boat="' + boatIndex + '">';
 		
 		if (boatTitle) {
@@ -185,7 +217,7 @@ jQuery(document).ready(function($) {
 		hoverClass: 'drop-zone-hover',
 		drop: function(event, ui) {
 			var userId = ui.draggable.data('user-id');
-			var userName = ui.draggable.text().replace('×', '').trim();
+			var userName = ui.draggable.hasClass('assigned-paddler') ? ui.draggable.find('.paddler-name').text().trim() : ui.draggable.text().trim();
 			
 			// Find and clear the position this paddler was in
 			var positionElement = ui.draggable.closest('.position');
@@ -194,7 +226,9 @@ jQuery(document).ready(function($) {
 			
 			positionElement.html('<span class="position-label">' + getPositionLabel(position) + '</span>');
 			positionElement.removeClass('position-filled');
-			delete seatingData[boatIndex][position];
+			if (seatingData.boats[boatIndex]) {
+				delete seatingData.boats[boatIndex][position];
+			}
 			
 			// Add paddler back to available list
 			var paddlerItem = $('<div class="paddler-item" draggable="true" data-user-id="' + userId + '">' + userName + '</div>');
@@ -204,7 +238,10 @@ jQuery(document).ready(function($) {
 			paddlerItem.draggable({
 				revert: 'invalid',
 				helper: 'clone',
-				zIndex: 1000
+				zIndex: 1000,
+				scroll: false,
+				distance: 5,
+				delay: 100
 			});
 			
 			updateSeatingDataInput();
@@ -219,19 +256,19 @@ jQuery(document).ready(function($) {
 				var position = $(this).data('position');
 				var boatIndex = $(this).data('boat');
 				var userId = ui.draggable.data('user-id');
-				var userName = ui.draggable.text().replace('×', '').trim();
+				var userName = ui.draggable.hasClass('assigned-paddler') ? ui.draggable.find('.paddler-name').text().trim() : ui.draggable.text().trim();
 				var isAssignedPaddler = ui.draggable.hasClass('assigned-paddler');
 				
 				// Ensure boat object exists
-				if (!seatingData[boatIndex]) {
-					seatingData[boatIndex] = {};
+				if (!seatingData.boats[boatIndex]) {
+					seatingData.boats[boatIndex] = {};
 				}
 				
 				// Handle position exchange if this position is already occupied
 				if ($(this).hasClass('position-filled')) {
 					var currentAssignedPaddler = $(this).find('.assigned-paddler');
 					var currentUserId = currentAssignedPaddler.data('user-id');
-					var currentUserName = currentAssignedPaddler.text().replace('×', '').trim();
+					var currentUserName = currentAssignedPaddler.find('.paddler-name').text().trim();
 					
 					if (isAssignedPaddler) {
 						// Exchange positions between two assigned paddlers
@@ -240,16 +277,16 @@ jQuery(document).ready(function($) {
 						var sourceBoatIndex = sourcePositionElement.data('boat');
 						
 						// Move current paddler to source position
-						sourcePositionElement.html('<span class="assigned-paddler draggable" data-user-id="' + currentUserId + '">' + currentUserName + ' <span class="remove-paddler">×</span></span>');
+						sourcePositionElement.html('<span class="assigned-paddler draggable" data-user-id="' + currentUserId + '"><span class="paddler-name">' + currentUserName + '</span><span class="remove-paddler"><span class="dashicons dashicons-dismiss"></span></span></span>');
 						sourcePositionElement.addClass('position-filled');
 						
 						// Ensure source boat object exists
-						if (!seatingData[sourceBoatIndex]) {
-							seatingData[sourceBoatIndex] = {};
+						if (!seatingData.boats[sourceBoatIndex]) {
+							seatingData.boats[sourceBoatIndex] = {};
 						}
 						
 						// Update seating data for source position
-						seatingData[sourceBoatIndex][sourcePosition] = {
+						seatingData.boats[sourceBoatIndex][sourcePosition] = {
 							userId: currentUserId,
 							userName: currentUserName
 						};
@@ -274,8 +311,8 @@ jQuery(document).ready(function($) {
 					sourcePositionElement.html('<span class="position-label">' + getPositionLabel(sourcePosition) + '</span>');
 					sourcePositionElement.removeClass('position-filled');
 					
-					if (seatingData[sourceBoatIndex]) {
-						delete seatingData[sourceBoatIndex][sourcePosition];
+					if (seatingData.boats[sourceBoatIndex]) {
+						delete seatingData.boats[sourceBoatIndex][sourcePosition];
 					}
 				} else {
 					// Clear any existing assignment for this user from other positions
@@ -286,7 +323,7 @@ jQuery(document).ready(function($) {
 				}
 				
 				// Add user to this position
-				$(this).html('<span class="assigned-paddler draggable" data-user-id="' + userId + '">' + userName + ' <span class="remove-paddler">×</span></span>');
+				$(this).html('<span class="assigned-paddler draggable" data-user-id="' + userId + '"><span class="paddler-name">' + userName + '</span><span class="remove-paddler"><span class="dashicons dashicons-dismiss"></span></span></span>');
 				$(this).addClass('position-filled');
 				
 				// Make assigned paddler draggable
@@ -294,11 +331,14 @@ jQuery(document).ready(function($) {
 				assignedPaddlerElement.draggable({
 					revert: 'invalid',
 					helper: 'clone',
-					zIndex: 1000
+					zIndex: 1000,
+					scroll: false,
+					distance: 5,
+					delay: 100
 				});
 				
 				// Update seating data
-				seatingData[boatIndex][position] = {
+				seatingData.boats[boatIndex][position] = {
 					userId: userId,
 					userName: userName
 				};
@@ -316,7 +356,7 @@ jQuery(document).ready(function($) {
 		var boatIndex = positionElement.data('boat');
 		var assignedPaddler = $(this).closest('.assigned-paddler');
 		var userId = assignedPaddler.data('user-id');
-		var userName = assignedPaddler.text().replace('×', '').trim();
+		var userName = assignedPaddler.find('.paddler-name').text().trim();
 		
 		// Add paddler back to available list
 		var paddlerItem = $('<div class="paddler-item" draggable="true" data-user-id="' + userId + '">' + userName + '</div>');
@@ -333,8 +373,8 @@ jQuery(document).ready(function($) {
 		positionElement.html('<span class="position-label">' + getPositionLabel(position) + '</span>');
 		positionElement.removeClass('position-filled');
 		
-		if (seatingData[boatIndex]) {
-			delete seatingData[boatIndex][position];
+		if (seatingData.boats[boatIndex]) {
+			delete seatingData.boats[boatIndex][position];
 		}
 		updateSeatingDataInput();
 	});
@@ -345,7 +385,7 @@ jQuery(document).ready(function($) {
 			if (assignedPaddler.length) {
 				var position = $(this).data('position');
 				var boatIndex = $(this).data('boat');
-				var userName = assignedPaddler.text().replace('×', '').trim();
+				var userName = assignedPaddler.find('.paddler-name').text().trim();
 				
 				// Add paddler back to available list
 				var paddlerItem = $('<div class="paddler-item" draggable="true" data-user-id="' + userId + '">' + userName + '</div>');
@@ -355,14 +395,17 @@ jQuery(document).ready(function($) {
 				paddlerItem.draggable({
 					revert: 'invalid',
 					helper: 'clone',
-					zIndex: 1000
+					zIndex: 1000,
+					scroll: false,
+					distance: 5,
+					delay: 100
 				});
 				
 				$(this).html('<span class="position-label">' + getPositionLabel(position) + '</span>');
 				$(this).removeClass('position-filled');
 				
-				if (seatingData[boatIndex]) {
-					delete seatingData[boatIndex][position];
+				if (seatingData.boats[boatIndex]) {
+					delete seatingData.boats[boatIndex][position];
 				}
 			}
 		});
@@ -463,7 +506,7 @@ jQuery(document).ready(function($) {
 			var position = $(this).data('position');
 			var assignedPaddler = $(this).find('.assigned-paddler');
 			var userId = assignedPaddler.data('user-id');
-			var userName = assignedPaddler.text().replace('×', '').trim();
+			var userName = assignedPaddler.find('.paddler-name').text().trim();
 			
 			// Add paddler back to available list
 			var paddlerItem = $('<div class="paddler-item" draggable="true" data-user-id="' + userId + '">' + userName + '</div>');
@@ -473,7 +516,10 @@ jQuery(document).ready(function($) {
 			paddlerItem.draggable({
 				revert: 'invalid',
 				helper: 'clone',
-				zIndex: 1000
+				zIndex: 1000,
+				scroll: false,
+				distance: 5,
+				delay: 100
 			});
 			
 			// Clear the position
@@ -482,8 +528,8 @@ jQuery(document).ready(function($) {
 		});
 		
 		// Clear seating data for this boat
-		if (seatingData[boatIndex]) {
-			seatingData[boatIndex] = {};
+		if (seatingData.boats[boatIndex]) {
+			seatingData.boats[boatIndex] = {};
 		}
 		
 		// Update the hidden input
@@ -503,17 +549,30 @@ jQuery(document).ready(function($) {
 		// Update boat count
 		boatCount = 2;
 		
+		// Set user preference to show boat 2
+		seatingData.metadata.boat2Visible = true;
+		
 		// Ensure we have boat data arrays
-		while (seatingData.length < 2) {
-			seatingData.push({});
+		while (seatingData.boats.length < 2) {
+			seatingData.boats.push({});
 		}
 		
-		// Create and append boat 2 HTML
-		var boat2Html = createBoatHTML(1);
-		$('#boats-container').append(boat2Html);
+		// Recreate both boats with proper titles (since we're going from 1 to 2 boats)
+		// Store current seating data to restore after recreation
+		var currentSeatingData = JSON.parse(JSON.stringify(seatingData.boats));
 		
-		// Re-initialize drag/drop for the new boat
+		// Clear and recreate all boats with titles
+		$('#boats-container').empty();
+		for (var i = 0; i < 2; i++) {
+			var boatHtml = createBoatHTML(i, 2);
+			$('#boats-container').append(boatHtml);
+		}
+		
+		// Re-initialize drag/drop for all boats
 		initializeDragDrop();
+		
+		// Restore seating arrangement
+		loadSeatingArrangement();
 		
 		// Update global controls
 		setupGlobalControls(boatCount);
@@ -535,7 +594,7 @@ jQuery(document).ready(function($) {
 			$('.position-filled[data-boat="1"]').each(function() {
 				var assignedPaddler = $(this).find('.assigned-paddler');
 				var userId = assignedPaddler.data('user-id');
-				var userName = assignedPaddler.text().replace('×', '').trim();
+				var userName = assignedPaddler.find('.paddler-name').text().trim();
 				
 				// Add paddler back to available list
 				var paddlerItem = $('<div class="paddler-item" draggable="true" data-user-id="' + userId + '">' + userName + '</div>');
@@ -545,7 +604,10 @@ jQuery(document).ready(function($) {
 				paddlerItem.draggable({
 					revert: 'invalid',
 					helper: 'clone',
-					zIndex: 1000
+					zIndex: 1000,
+					scroll: false,
+					distance: 5,
+					delay: 100
 				});
 			});
 			
@@ -555,9 +617,12 @@ jQuery(document).ready(function($) {
 			// Update boat count
 			boatCount = 1;
 			
+			// Set user preference to hide boat 2
+			seatingData.metadata.boat2Visible = false;
+			
 			// Clear boat 2 seating data
-			if (seatingData.length > 1) {
-				seatingData.splice(1, 1);
+			if (seatingData.boats.length > 1) {
+				seatingData.boats.splice(1, 1);
 			}
 			
 			// Update global controls
@@ -581,12 +646,12 @@ jQuery(document).ready(function($) {
 	
 	function loadSeatingArrangement() {
 		// Load seating data for each boat
-		for (var boatIndex = 0; boatIndex < seatingData.length; boatIndex++) {
-			if (seatingData[boatIndex]) {
-				$.each(seatingData[boatIndex], function(position, userData) {
+		for (var boatIndex = 0; boatIndex < seatingData.boats.length; boatIndex++) {
+			if (seatingData.boats[boatIndex]) {
+				$.each(seatingData.boats[boatIndex], function(position, userData) {
 					var positionElement = $('.position[data-position="' + position + '"][data-boat="' + boatIndex + '"]');
 					if (positionElement.length && userData) {
-						positionElement.html('<span class="assigned-paddler draggable" data-user-id="' + userData.userId + '">' + userData.userName + ' <span class="remove-paddler">×</span></span>');
+						positionElement.html('<span class="assigned-paddler draggable" data-user-id="' + userData.userId + '"><span class="paddler-name">' + userData.userName + '</span><span class="remove-paddler"><span class="dashicons dashicons-dismiss"></span></span></span>');
 						positionElement.addClass('position-filled');
 						
 						// Make assigned paddler draggable
@@ -594,7 +659,10 @@ jQuery(document).ready(function($) {
 						assignedPaddlerElement.draggable({
 							revert: 'invalid',
 							helper: 'clone',
-							zIndex: 1000
+							zIndex: 1000,
+							scroll: false,
+							distance: 5,
+							delay: 100
 						});
 						
 						// Remove this paddler from available list
@@ -714,8 +782,8 @@ jQuery(document).ready(function($) {
 
 .drummer-position,
 .steersperson-position {
-	width: 80px;
-	height: 40px;
+	min-width: 120px;
+	min-height: 35px;
 	border: 2px solid #333;
 	margin: 0 auto;
 	display: flex;
@@ -723,7 +791,6 @@ jQuery(document).ready(function($) {
 	justify-content: center;
 	border-radius: 4px;
 	font-size: 12px;
-	min-height: 40px;
 }
 
 .drummer-position {
@@ -784,14 +851,23 @@ jQuery(document).ready(function($) {
 	border-color: #007bff !important;
 }
 
+.position-filled .position-label {
+	display: none;
+}
+
 .assigned-paddler {
+	position: relative;
 	font-weight: bold;
 	color: #007bff;
 	cursor: move;
 	font-size: 10px;
-	text-align: center;
 	word-break: break-word;
 	line-height: 1.2;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 120px;
+	min-height: 35px;
 }
 
 .assigned-paddler:hover {
@@ -800,17 +876,29 @@ jQuery(document).ready(function($) {
 }
 
 .remove-paddler {
-	color: #dc3545;
+	position: absolute;
+	top: -8px;
+	right: -8px;
+	width: 18px;
+	height: 18px;
+	background-color: #dc3545;
+	color: white;
 	font-weight: bold;
-	margin-left: 3px;
 	cursor: pointer;
-	padding: 0 2px;
-	border-radius: 2px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 10px;
+	line-height: 1;
+	border: 2px solid white;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+	z-index: 10;
 }
 
 .remove-paddler:hover {
-	background-color: #dc3545;
-	color: white;
+	background-color: #c82333;
+	transform: scale(1.1);
 }
 
 .paddler-item:hover {
@@ -831,6 +919,41 @@ jQuery(document).ready(function($) {
 
 .ui-draggable-dragging {
 	z-index: 1000 !important;
+}
+
+/* Mobile touch improvements */
+.paddler-item,
+.assigned-paddler {
+	touch-action: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+@media (max-width: 768px) {
+	.paddler-item {
+		padding: 10px 14px; /* Larger touch targets */
+		font-size: 14px;
+		min-height: 44px; /* Apple's recommended minimum touch target */
+	}
+	
+	.position {
+		min-height: 44px; /* Ensure drop targets are large enough */
+	}
+	
+	.assigned-paddler {
+		min-width: 100px;
+		min-height: 40px;
+	}
+	
+	.remove-paddler {
+		width: 20px;
+		height: 20px;
+		font-size: 11px;
+		top: -10px;
+		right: -10px;
+	}
 }
 
 /* Action buttons styling */
@@ -922,8 +1045,8 @@ jQuery(document).ready(function($) {
 	
 	.drummer-position,
 	.steersperson-position {
-		width: 70px;
-		height: 35px;
+		min-width: 100px;
+		min-height: 40px;
 		font-size: 11px;
 	}
 	
@@ -966,17 +1089,23 @@ jQuery(document).ready(function($) {
 	
 	.drummer-position,
 	.steersperson-position {
-		width: 60px;
-		height: 32px;
+		min-width: 80px;
+		min-height: 32px;
 		font-size: 10px;
 	}
 	
 	.assigned-paddler {
+		min-width: 80px;
+		min-height: 32px;
 		font-size: 8px;
 	}
 	
 	.remove-paddler {
-		font-size: 9px;
+		width: 16px;
+		height: 16px;
+		font-size: 8px;
+		top: -8px;
+		right: -8px;
 	}
 	
 	#available-paddlers {

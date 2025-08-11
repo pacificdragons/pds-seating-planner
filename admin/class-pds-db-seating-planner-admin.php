@@ -60,21 +60,13 @@ class Pds_Db_Seating_Planner_Admin {
 	 * @since    1.0.0
 	 */
 	public function enqueue_styles() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Pds_Db_Seating_Planner_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Pds_Db_Seating_Planner_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
+		// Only enqueue on post.php pages
+		$screen = get_current_screen();
+		if ( ! $screen || $screen->base !== 'post' ) {
+			return;
+		}
 
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/pds-db-seating-planner-admin.css', array(), $this->version, 'all' );
-
 	}
 
 	/**
@@ -83,24 +75,16 @@ class Pds_Db_Seating_Planner_Admin {
 	 * @since    1.0.0
 	 */
 	public function enqueue_scripts() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Pds_Db_Seating_Planner_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Pds_Db_Seating_Planner_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
+		// Only enqueue on post.php pages
+		$screen = get_current_screen();
+		if ( ! $screen || $screen->base !== 'post' ) {
+			return;
+		}
 
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/pds-db-seating-planner-admin.js', array( 'jquery', 'jquery-ui-draggable', 'jquery-ui-droppable' ), $this->version, false );
 
 		// Enqueue jQuery UI Touch Punch for mobile support
 		wp_enqueue_script( 'jquery-ui-touch-punch', 'https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js', array( 'jquery-ui-core' ), '0.2.3', false );
-
 	}
 
 	/**

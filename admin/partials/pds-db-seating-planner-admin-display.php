@@ -63,4 +63,57 @@
 
 	<!-- Hidden input to store seating data -->
 	<input type="hidden" name="seating_plan_data" id="seating-plan-data" value="<?php echo esc_attr( $seating_data ); ?>" />
+
+	<!-- Boat template -->
+	<template id="boat-template">
+		<div class="boat-container" data-boat="">
+			<div class="boat-header">
+				<h5 class="boat-title"></h5>
+				<div class="boat-controls">
+					<button type="button" class="button button-small empty-single-boat" data-boat="">
+						<span class="dashicons dashicons-dismiss"></span> Empty
+					</button>
+				</div>
+			</div>
+			<div class="drummer-section">
+				<div class="position drummer-position" data-position="drummer" data-boat="">
+					<span class="position-label">Drummer</span>
+				</div>
+			</div>
+			<div class="paddlers-section">
+				<?php for ( $row = 1; $row <= 10; $row++ ) : ?>
+				<div class="paddler-row">
+					<div class="position paddler-position" data-position="left-<?php echo $row; ?>" data-boat="">
+						<span class="position-label">L<?php echo $row; ?></span>
+					</div>
+					<div class="row-number"><?php echo $row; ?></div>
+					<div class="position paddler-position" data-position="right-<?php echo $row; ?>" data-boat="">
+						<span class="position-label">R<?php echo $row; ?></span>
+					</div>
+				</div>
+				<?php endfor; ?>
+			</div>
+			<div class="steersperson-section">
+				<div class="position steersperson-position" data-position="steersperson" data-boat="">
+					<span class="position-label">Steerer</span>
+				</div>
+			</div>
+		</div>
+	</template>
+
+	<!-- Global controls templates -->
+	<template id="single-boat-controls-template">
+		<button type="button" id="empty-boat" class="button button-secondary" style="margin: 5px;">
+			<span class="dashicons dashicons-dismiss" style="margin-right: 5px;"></span>Empty Boat
+		</button>
+		<button type="button" id="add-remove-boat-2" class="button button-secondary" style="margin: 5px;">
+			<span class="dashicons dashicons-plus-alt" style="margin-right: 5px;"></span>Add Boat 2
+		</button>
+	</template>
+
+	<template id="multi-boat-controls-template">
+		<button type="button" id="add-remove-boat-2" class="button button-secondary" style="margin-right: 10px;">
+			<span class="dashicons dashicons-minus" style="margin-right: 5px;"></span>Remove Boat 2
+		</button>
+	</template>
 </div>

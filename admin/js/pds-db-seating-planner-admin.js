@@ -10,9 +10,7 @@
 
   $(document).ready(function () {
     // Only initialize if we're on a page with the seating planner
-    if ($("#pds-seating-planner").length === 0) {
-      return;
-    }
+    if ($("#pds-seating-planner").length === 0) return;
 
     var seatingData = {
       boats: [],
@@ -23,29 +21,13 @@
     var totalPaddlers = $(".paddler-item").length;
     var defaultBoatCount = totalPaddlers > 20 ? 2 : 1;
     var actualBoatCount = defaultBoatCount;
+    var boatCount = actualBoatCount;
 
     // Load existing seating data first
     var existingData = $("#seating-plan-data").val();
     if (existingData) {
       try {
-        var loadedData = JSON.parse(existingData);
-        // Handle backward compatibility - convert old format to new format
-        if (loadedData && Array.isArray(loadedData)) {
-          // Old array format - convert to new structure
-          seatingData.boats = loadedData;
-          seatingData.metadata.boat2Visible = null; // Use default behavior
-        } else if (
-          loadedData &&
-          !Array.isArray(loadedData) &&
-          !loadedData.boats
-        ) {
-          // Very old single boat format - convert to new structure
-          seatingData.boats = [loadedData];
-          seatingData.metadata.boat2Visible = null;
-        } else if (loadedData && loadedData.boats) {
-          // New format - use as is
-          seatingData = loadedData;
-        }
+        seatingData = JSON.parse(existingData);
       } catch (e) {
         console.log("Error parsing existing seating data");
       }
@@ -77,7 +59,7 @@
     }
 
     // Update global reference for other functions
-    window.boatCount = actualBoatCount;
+    boatCount = actualBoatCount;
 
     // Make paddler items draggable with touch support
     $(".paddler-item").draggable({
@@ -94,103 +76,59 @@
       boatsContainer.empty();
 
       for (var i = 0; i < count; i++) {
-        var boatHtml = createBoatHTML(i, count);
-        boatsContainer.append(boatHtml);
+        var boatElement = createBoatFromTemplate(i, count);
+        boatsContainer.append(boatElement);
       }
 
       // Re-initialize drag/drop after creating boats
       initializeDragDrop();
     }
 
-    function createBoatHTML(boatIndex, totalBoats) {
-      var boatTitle = totalBoats > 1 ? "Boat " + (boatIndex + 1) : "";
-      var boatHtml =
-        '<div class="boat-container" data-boat="' + boatIndex + '">';
+    function createBoatFromTemplate(boatIndex, totalBoats) {
+      var template = document.getElementById("boat-template");
+      var clone = document.importNode(template.content, true);
 
-      if (boatTitle) {
-        boatHtml += '<div class="boat-header">';
-        boatHtml += '<h5 class="boat-title">' + boatTitle + "</h5>";
-        boatHtml += '<div class="boat-controls">';
-        boatHtml +=
-          '<button type="button" class="button button-small empty-single-boat" data-boat="' +
-          boatIndex +
-          '">';
-        boatHtml += '<span class="dashicons dashicons-dismiss"></span> Empty';
-        boatHtml += "</button>";
-        boatHtml += "</div>";
-        boatHtml += "</div>";
+      var boatContainer = clone.querySelector(".boat-container");
+      boatContainer.setAttribute("data-boat", boatIndex);
+
+      var boatTitleElement = clone.querySelector(".boat-title");
+
+      if (totalBoats > 1) {
+        // Multiple boats - show title and empty button
+        var boatTitle = "Boat " + (boatIndex + 1);
+        boatTitleElement.textContent = boatTitle;
+      } else {
+        // Single boat - remove the header entirely
+        var boatHeader = clone.querySelector(".boat-header");
+        if (boatHeader) {
+          boatHeader.remove();
+        }
       }
 
-      // Drummer position
-      boatHtml +=
-        '<div class="drummer-section">' +
-        '<div class="position drummer-position" data-position="drummer" data-boat="' +
-        boatIndex +
-        '">' +
-        '<span class="position-label">Drummer</span>' +
-        "</div>" +
-        "</div>";
+      // Set boat index for all elements with data-boat attribute
+      var elementsWithBoatData = clone.querySelectorAll('[data-boat=""]');
+      elementsWithBoatData.forEach(function (element) {
+        element.setAttribute("data-boat", boatIndex);
+      });
 
-      // Paddler positions
-      boatHtml += '<div class="paddlers-section">';
-      for (var row = 1; row <= 10; row++) {
-        boatHtml +=
-          '<div class="paddler-row">' +
-          '<div class="position paddler-position" data-position="left-' +
-          row +
-          '" data-boat="' +
-          boatIndex +
-          '">' +
-          '<span class="position-label">L' +
-          row +
-          "</span>" +
-          "</div>" +
-          '<div class="row-number">' +
-          row +
-          "</div>" +
-          '<div class="position paddler-position" data-position="right-' +
-          row +
-          '" data-boat="' +
-          boatIndex +
-          '">' +
-          '<span class="position-label">R' +
-          row +
-          "</span>" +
-          "</div>" +
-          "</div>";
-      }
-      boatHtml += "</div>";
-
-      // Steersperson position
-      boatHtml +=
-        '<div class="steersperson-section">' +
-        '<div class="position steersperson-position" data-position="steersperson" data-boat="' +
-        boatIndex +
-        '">' +
-        '<span class="position-label">Steerer</span>' +
-        "</div>" +
-        "</div>";
-
-      boatHtml += "</div>";
-      return boatHtml;
+      return clone;
     }
 
     function setupGlobalControls(count) {
       var globalControls = $("#global-controls");
       globalControls.empty();
 
-      // Only show global empty button for single boat
-      if (count === 1) {
-        globalControls.html(
-          '<button type="button" id="empty-boat" class="button button-secondary" style="margin: 5px;"><span class="dashicons dashicons-dismiss" style="margin-right: 5px;"></span>Empty Boat</button><button type="button" id="add-remove-boat-2" class="button button-secondary" style="margin: 5px;"><span class="dashicons dashicons-plus-alt" style="margin-right: 5px;"></span>Add Boat 2</button>'
-        );
-      }
-      // For multiple boats, show option to remove boat 2
-      else {
-        globalControls.html(
-          '<button type="button" id="add-remove-boat-2" class="button button-secondary" style="margin-right: 10px;"><span class="dashicons dashicons-minus" style="margin-right: 5px;"></span>Remove Boat 2</button>'
-        );
-      }
+      // Check if boat 2 is visible based on metadata
+      var boat2Visible =
+        seatingData.metadata && seatingData.metadata.boat2Visible;
+
+      var templateId = boat2Visible
+        ? "multi-boat-controls-template"
+        : "single-boat-controls-template";
+      var template = document.getElementById(templateId);
+      var clone = document.importNode(template.content, true);
+
+      globalControls.append(clone);
     }
 
     function initializeDragDrop() {
@@ -565,7 +503,7 @@
 
     // Add/Remove boat 2 button click handler
     $(document).on("click", "#add-remove-boat-2", function () {
-      if (window.boatCount === 1) {
+      if (!seatingData.metadata.boat2Visible) {
         addBoat2();
       } else {
         removeBoat2();
@@ -618,7 +556,7 @@
       updateSeatingDataInput();
 
       // Show feedback
-      var boatName = window.boatCount > 1 ? "Boat " + (boatIndex + 1) : "Boat";
+      var boatName = boatCount > 1 ? "Boat " + (boatIndex + 1) : "Boat";
       $("#save-status")
         .html(
           '<span style="color: #46b450;">✓ ' +
@@ -635,6 +573,7 @@
 
     function addBoat2() {
       // Update boat count
+      boatCount = 2;
       window.boatCount = 2;
 
       // Set user preference to show boat 2
@@ -652,8 +591,8 @@
       // Clear and recreate all boats with titles
       $("#boats-container").empty();
       for (var i = 0; i < 2; i++) {
-        var boatHtml = createBoatHTML(i, 2);
-        $("#boats-container").append(boatHtml);
+        var boatElement = createBoatFromTemplate(i, 2);
+        $("#boats-container").append(boatElement);
       }
 
       // Re-initialize drag/drop for all boats
@@ -717,6 +656,7 @@
         $('.boat-container[data-boat="1"]').remove();
 
         // Update boat count
+        boatCount = 1;
         window.boatCount = 1;
 
         // Set user preference to hide boat 2

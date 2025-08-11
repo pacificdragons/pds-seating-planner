@@ -2,3 +2,463 @@
  * All of the CSS for your admin-specific functionality should be
  * included in this file.
  */
+
+/* Base responsive layout */
+#pds-seating-planner {
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+/* Available paddlers section */
+#available-paddlers {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 20px;
+	padding: 15px;
+	border: 2px dashed #ccc;
+	min-height: 60px;
+	border-radius: 4px;
+	transition: all 0.3s ease;
+}
+
+.paddler-item {
+	padding: 8px 12px;
+	background: #f0f0f0;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	cursor: move;
+	display: inline-block;
+	font-size: 14px;
+	white-space: nowrap;
+}
+
+.no-paddlers {
+	color: #666;
+	margin: 0;
+	font-style: italic;
+}
+
+/* Multiple boats container */
+.boats-container {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 30px;
+	justify-content: center;
+	align-items: flex-start;
+}
+
+/* Individual boat container */
+.boat-container {
+	max-width: 550px;
+	flex: 1;
+	min-width: 300px;
+	padding: 0 10px;
+	margin: 0 auto;
+}
+
+.boat-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 15px;
+	padding-bottom: 8px;
+	border-bottom: 2px solid #ddd;
+}
+
+.boat-title {
+	margin: 0;
+	color: #333;
+	font-size: 16px;
+	font-weight: bold;
+	flex: 1;
+}
+
+.boat-controls {
+	display: flex;
+	gap: 8px;
+}
+
+.boat-controls .button {
+	font-size: 12px;
+	padding: 4px 8px;
+	height: auto;
+	line-height: 1.2;
+}
+
+.boat-controls .dashicons {
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+	margin-right: 4px;
+	vertical-align: middle;
+	line-height: 1;
+}
+
+/* Drummer and steersperson sections */
+.drummer-section,
+.steersperson-section {
+	text-align: center;
+	margin-bottom: 15px;
+}
+
+.steersperson-section {
+	margin-bottom: 0;
+	margin-top: 15px;
+}
+
+.drummer-position,
+.steersperson-position {
+	min-width: 120px;
+	min-height: 35px;
+	border: 2px solid #333;
+	margin: 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 4px;
+	font-size: 12px;
+}
+
+.drummer-position {
+	background: #e8f4f8;
+}
+
+.steersperson-position {
+	background: #f8e8e8;
+}
+
+/* Paddlers section - responsive grid */
+.paddlers-section {
+	display: grid;
+	grid-template-rows: repeat(10, 1fr);
+	gap: 6px;
+	margin-bottom: 15px;
+}
+
+.paddler-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+}
+
+.paddler-position {
+	flex: 1;
+	max-width: 120px;
+	height: 35px;
+	border: 2px dashed #666;
+	background: #fff;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 11px;
+	border-radius: 4px;
+	min-height: 35px;
+}
+
+.row-number {
+	padding: 0 8px;
+	color: #666;
+	font-weight: bold;
+	font-size: 12px;
+	flex-shrink: 0;
+	min-width: 20px;
+	text-align: center;
+}
+
+/* Position states */
+.position-hover {
+	background-color: #d4edda !important;
+	border-color: #28a745 !important;
+}
+
+.position-filled {
+	background-color: #d1ecf1 !important;
+	border-color: #007bff !important;
+}
+
+.position-filled .position-label {
+	display: none;
+}
+
+.assigned-paddler {
+	position: relative;
+	font-weight: bold;
+	color: #007bff;
+	cursor: move;
+	font-size: 10px;
+	word-break: break-word;
+	line-height: 1.2;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 120px;
+	min-height: 35px;
+}
+
+.assigned-paddler:hover {
+	background-color: #b3d9ff !important;
+	border-radius: 3px;
+}
+
+.remove-paddler {
+	position: absolute;
+	top: -8px;
+	right: -8px;
+	width: 18px;
+	height: 18px;
+	background-color: #dc3545;
+	color: white;
+	font-weight: bold;
+	cursor: pointer;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 10px;
+	line-height: 1;
+	border: 2px solid white;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+	z-index: 10;
+}
+
+.remove-paddler:hover {
+	background-color: #c82333;
+	transform: scale(1.1);
+}
+
+.paddler-item:hover {
+	background-color: #e9ecef !important;
+	transform: scale(1.05);
+}
+
+.drop-zone-hover {
+	background-color: #fff3cd !important;
+	border-color: #ffc107 !important;
+}
+
+#available-paddlers.drop-zone-hover {
+	background-color: #fff3cd !important;
+	border-color: #ffc107 !important;
+	border-style: solid !important;
+}
+
+.ui-draggable-dragging {
+	z-index: 1000 !important;
+}
+
+/* Mobile touch improvements */
+.paddler-item,
+.assigned-paddler {
+	touch-action: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+@media (max-width: 768px) {
+	.paddler-item {
+		padding: 10px 14px; /* Larger touch targets */
+		font-size: 14px;
+		min-height: 44px; /* Apple's recommended minimum touch target */
+	}
+
+	.position {
+		min-height: 44px; /* Ensure drop targets are large enough */
+	}
+
+	.assigned-paddler {
+		min-width: 100px;
+		min-height: 40px;
+	}
+
+	.remove-paddler {
+		width: 20px;
+		height: 20px;
+		font-size: 11px;
+		top: -10px;
+		right: -10px;
+	}
+}
+
+/* Action buttons styling */
+.action-buttons {
+	margin-top: 20px !important;
+	text-align: center;
+	padding-top: 15px;
+	border-top: 1px solid #ddd;
+}
+
+#empty-boat,
+#save-seating-plan {
+	min-width: 140px;
+	margin: 5px;
+}
+
+#empty-boat .dashicons,
+#save-seating-plan .dashicons {
+	margin-right: 5px;
+	vertical-align: middle;
+}
+
+#save-status {
+	margin-top: 10px;
+	font-size: 14px;
+	min-height: 20px;
+}
+
+/* Global controls button alignment */
+#global-controls .button .dashicons {
+	vertical-align: middle;
+	line-height: 1;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+	.dragon-boat-layout {
+		padding: 15px 10px !important;
+	}
+
+	/* Stack boats vertically on mobile */
+	.boats-container {
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.boat-container {
+		padding: 0 5px;
+		min-width: unset;
+		max-width: 100%;
+	}
+
+	.boat-header {
+		flex-direction: column;
+		gap: 10px;
+		align-items: stretch;
+	}
+
+	.boat-title {
+		font-size: 15px;
+		text-align: center;
+	}
+
+	.boat-controls {
+		justify-content: center;
+		gap: 6px;
+	}
+
+	.boat-controls .button {
+		font-size: 11px;
+		padding: 3px 6px;
+	}
+
+	.paddler-row {
+		gap: 4px;
+	}
+
+	.paddler-position {
+		max-width: none;
+		min-width: 80px;
+		font-size: 10px;
+	}
+
+	.row-number {
+		padding: 0 4px;
+		min-width: 16px;
+		font-size: 11px;
+	}
+
+	.drummer-position,
+	.steersperson-position {
+		min-width: 100px;
+		min-height: 40px;
+		font-size: 11px;
+	}
+
+	.assigned-paddler {
+		font-size: 9px;
+	}
+
+	.remove-paddler {
+		margin-left: 2px;
+		font-size: 10px;
+	}
+
+	#available-paddlers {
+		gap: 6px;
+		padding: 10px;
+	}
+
+	.paddler-item {
+		padding: 6px 10px;
+		font-size: 13px;
+	}
+}
+
+@media (max-width: 480px) {
+	.paddlers-section {
+		gap: 4px;
+	}
+
+	.paddler-position {
+		min-width: 60px;
+		height: 32px;
+		font-size: 9px;
+	}
+
+	.row-number {
+		padding: 0 3px;
+		min-width: 14px;
+		font-size: 10px;
+	}
+
+	.drummer-position,
+	.steersperson-position {
+		min-width: 80px;
+		min-height: 32px;
+		font-size: 10px;
+	}
+
+	.assigned-paddler {
+		min-width: 80px;
+		min-height: 32px;
+		font-size: 8px;
+	}
+
+	.remove-paddler {
+		width: 16px;
+		height: 16px;
+		font-size: 8px;
+		top: -8px;
+		right: -8px;
+	}
+
+	#available-paddlers {
+		gap: 4px;
+		padding: 8px;
+	}
+
+	.paddler-item {
+		padding: 5px 8px;
+		font-size: 12px;
+	}
+
+	.dragon-boat-layout {
+		padding: 10px 5px !important;
+	}
+
+	/* Stack buttons vertically on very small screens */
+	.action-buttons {
+		padding: 10px 5px;
+	}
+
+	#empty-boat,
+	#save-seating-plan {
+		display: block;
+		width: 100%;
+		max-width: 200px;
+		margin: 5px auto;
+	}
+}

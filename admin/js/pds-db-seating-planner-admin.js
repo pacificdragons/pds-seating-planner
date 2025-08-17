@@ -224,6 +224,17 @@
               );
               sourcePositionElement.addClass("position-filled");
 
+              // Make the moved paddler draggable
+              var movedPaddlerElement = sourcePositionElement.find(".assigned-paddler");
+              movedPaddlerElement.draggable({
+                revert: "invalid",
+                helper: "clone",
+                zIndex: 1000,
+                scroll: false,
+                distance: 5,
+                delay: 100,
+              });
+
               // Ensure source boat object exists
               if (!seatingData.boats[sourceBoatIndex]) {
                 seatingData.boats[sourceBoatIndex] = {};
@@ -308,9 +319,17 @@
       });
     }
 
-    // Handle click on remove button (×)
-    $(document).on("click", ".remove-paddler", function (e) {
+    // Handle click on remove button (×) - support both click and touch events for mobile
+    $(document).on("click touchend", ".remove-paddler", function (e) {
+      e.preventDefault();
       e.stopPropagation();
+      
+      // Prevent duplicate events from both click and touchend
+      if ($(this).data('removing')) {
+        return;
+      }
+      $(this).data('removing', true);
+      
       var positionElement = $(this).closest(".position");
       var position = positionElement.data("position");
       var boatIndex = positionElement.data("boat");
@@ -345,6 +364,11 @@
         delete seatingData.boats[boatIndex][position];
       }
       updateSeatingDataInput();
+      
+      // Clear the removing flag after a short delay to ensure proper event handling
+      setTimeout(function() {
+        $('.remove-paddler').removeData('removing');
+      }, 100);
     });
 
     function clearUserFromAllPositions(userId) {
@@ -394,7 +418,15 @@
     function getPositionLabel(position) {
       if (position === "drummer") return "Drummer";
       if (position === "steersperson") return "Steerer";
-      return position.replace("-", "").toUpperCase();
+      // Handle position formats like "left-1", "right-2", etc.
+      // Match the template's display format: L1, L2, R1, R2, etc.
+      if (position.startsWith("left-")) {
+        return "L" + position.substring(5);
+      }
+      if (position.startsWith("right-")) {
+        return "R" + position.substring(6);
+      }
+      return position.replace(/-/, "").toUpperCase();
     }
 
     // Save button click handler

@@ -2,3 +2,295 @@
  * All of the CSS for your public-facing functionality should be
  * included in this file.
  */
+
+/* Base layout for public dragon boat display */
+#pds-seating-planner-public {
+	max-width: 100%;
+	overflow-x: auto;
+	margin: 0 auto;
+}
+
+#pds-seating-planner-public h6 {
+	margin: 0 0 15px 0;
+	font-size: 16px;
+	font-weight: bold;
+	color: #333;
+	text-align: center;
+}
+
+.dragon-boat-layout {
+	padding: 20px;
+}
+
+/* Multiple boats container */
+.boats-container {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 30px;
+	justify-content: center;
+	align-items: flex-start;
+}
+
+/* Individual boat container */
+.boat-container {
+	max-width: 550px;
+	flex: 1;
+	min-width: 300px;
+	padding: 0 10px;
+	margin: 0 auto;
+}
+
+
+/* Drummer and steersperson sections */
+.drummer-section,
+.steersperson-section {
+	text-align: center;
+	margin-bottom: 15px;
+}
+
+.steersperson-section {
+	margin-bottom: 0;
+	margin-top: 15px;
+}
+
+.drummer-position,
+.steersperson-position {
+	min-width: 120px;
+	min-height: 40px;
+	border: 2px solid #333;
+	margin: 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	font-size: 13px;
+	font-weight: bold;
+}
+
+.drummer-position {
+	background: white;
+	color: #333;
+}
+
+.steersperson-position {
+	background: white;
+	color: #333;
+}
+
+/* Paddlers section */
+.paddlers-section {
+	display: grid;
+	grid-template-rows: repeat(10, 1fr);
+	gap: 8px;
+	margin-bottom: 15px;
+}
+
+.paddler-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 10px;
+}
+
+.paddler-position {
+	flex: 1;
+	max-width: 120px;
+	height: 40px;
+	border: 2px solid #666;
+	background: #fff;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	border-radius: 4px;
+	min-height: 40px;
+	transition: all 0.2s ease;
+}
+
+.left-position {
+	border-color: #d32f2f;
+	background: #ffebee;
+}
+
+.right-position {
+	border-color: #388e3c;
+	background: #e8f5e8;
+}
+
+.row-number {
+	padding: 0 8px;
+	color: #666;
+	font-weight: bold;
+	font-size: 14px;
+	flex-shrink: 0;
+	min-width: 24px;
+	text-align: center;
+	background: #eee;
+	border-radius: 50%;
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Position states */
+.position-label {
+	color: #888;
+	font-size: 11px;
+	font-style: italic;
+}
+
+.paddler-name {
+	font-weight: bold;
+	color: #333;
+	font-size: 11px;
+	text-align: center;
+	line-height: 1.2;
+	word-break: break-word;
+}
+
+.drummer-position .paddler-name {
+	color: #333;
+}
+
+.steersperson-position .paddler-name {
+	color: #333;
+}
+
+.left-position .paddler-name {
+	color: #c62828;
+}
+
+.right-position .paddler-name {
+	color: #2e7d32;
+}
+
+/* Filled positions styling */
+.drummer-position:has(.paddler-name),
+.steersperson-position:has(.paddler-name),
+.paddler-position:has(.paddler-name) {
+	border-style: solid;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.drummer-position:has(.paddler-name) {
+	background: #f5f5f5;
+}
+
+.steersperson-position:has(.paddler-name) {
+	background: #f5f5f5;
+}
+
+.left-position:has(.paddler-name) {
+	background: #ffcdd2;
+}
+
+.right-position:has(.paddler-name) {
+	background: #c8e6c9;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+	#pds-seating-planner-public {
+		width: 100%;
+	}
+
+	.dragon-boat-layout {
+		padding: 15px 5px;
+		width: 100%;
+	}
+
+	/* Stack boats vertically on mobile */
+	.boats-container {
+		flex-direction: column;
+		gap: 20px;
+		width: 100%;
+	}
+
+	.boat-container {
+		padding: 0;
+		min-width: unset;
+		max-width: 100%;
+		width: 100%;
+	}
+
+	.paddler-row {
+		gap: 8px;
+		width: 100%;
+	}
+
+	.paddler-position {
+		max-width: none;
+		min-width: 80px;
+		font-size: 11px;
+		height: 36px;
+		flex: 1;
+	}
+
+	.row-number {
+		padding: 0 4px;
+		min-width: 20px;
+		width: 20px;
+		height: 20px;
+		font-size: 12px;
+	}
+
+	.drummer-position,
+	.steersperson-position {
+		min-width: 100px;
+		min-height: 36px;
+		font-size: 12px;
+	}
+
+	.paddler-name {
+		font-size: 10px;
+	}
+}
+
+@media (max-width: 480px) {
+	.dragon-boat-layout {
+		padding: 10px 0;
+		width: 100%;
+	}
+
+	.boat-container {
+		padding: 0;
+		width: 100%;
+	}
+
+	.paddlers-section {
+		gap: 6px;
+		width: 100%;
+	}
+
+	.paddler-row {
+		gap: 6px;
+		width: 100%;
+	}
+
+	.paddler-position {
+		min-width: 70px;
+		height: 32px;
+		font-size: 10px;
+		flex: 1;
+	}
+
+	.row-number {
+		min-width: 18px;
+		width: 18px;
+		height: 18px;
+		font-size: 11px;
+	}
+
+	.drummer-position,
+	.steersperson-position {
+		min-width: 90%;
+		min-height: 32px;
+		font-size: 11px;
+	}
+
+	.paddler-name {
+		font-size: 9px;
+	}
+}

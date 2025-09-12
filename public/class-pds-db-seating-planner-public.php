@@ -100,4 +100,49 @@ class Pds_Db_Seating_Planner_Public {
 
 	}
 
+	/**
+	 * Register shortcode for displaying dragon boat seating planner
+	 *
+	 * @since    1.0.0
+	 */
+	public function register_shortcodes() {
+		add_shortcode( 'db_seating_planner', array( $this, 'db_seating_planner_shortcode' ) );
+	}
+
+	/**
+	 * Shortcode callback for displaying dragon boat seating planner
+	 *
+	 * @since    1.0.0
+	 * @param    array     $atts    Shortcode attributes
+	 */
+	public function db_seating_planner_shortcode( $atts ) {
+		
+		// Parse shortcode attributes
+		$atts = shortcode_atts( array(
+			'event_id' => get_the_ID(), // Default to current post ID
+		), $atts, 'db_seating_planner' );
+
+		// Get seating data for the event
+		$seating_data = '';
+		if ( $atts['event_id'] ) {
+			$seating_data = get_post_meta( $atts['event_id'], '_pds_seating_plan', true );
+		}
+
+		// Debug output (remove in production)
+		if ( WP_DEBUG ) {
+			error_log( 'DB Seating Planner Debug:' );
+			error_log( 'Event ID: ' . $atts['event_id'] );
+			error_log( 'Seating data: ' . $seating_data );
+		}
+
+		// Start output buffering
+		ob_start();
+
+		// Include the public display template
+		include plugin_dir_path( __FILE__ ) . 'partials/pds-db-seating-planner-public-display.php';
+
+		// Return the buffered content
+		return ob_get_clean();
+	}
+
 }

@@ -284,15 +284,15 @@ class Pds_Db_Seating_Planner_Admin {
 			wp_send_json_error( 'Security check failed' );
 		}
 
-		// Check user capabilities
-		if ( ! current_user_can( 'edit_posts' ) ) {
-			wp_send_json_error( 'Insufficient permissions' );
-		}
-
 		// Get and validate post ID
 		$post_id = intval( $_POST['post_id'] );
 		if ( ! $post_id || ! get_post( $post_id ) ) {
 			wp_send_json_error( 'Invalid post ID' );
+		}
+
+		// Check user capabilities
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( 'Insufficient permissions' );
 		}
 
 		// Get seating data (don't sanitize yet as it's JSON)
@@ -304,13 +304,16 @@ class Pds_Db_Seating_Planner_Admin {
 			wp_send_json_error( 'Invalid seating data format: ' . json_last_error_msg() );
 		}
 
-		// Now sanitize the JSON string after validation
-		$seating_data = sanitize_textarea_field( $seating_data );
+		// Since we've already validated the JSON structure, we can safely store it
+		// Using wp_json_encode to ensure consistent formatting
+		$seating_data = wp_json_encode( $decoded_data );
 
 		// Save the data
 		$result = update_post_meta( $post_id, '_pds_seating_plan', $seating_data );
 
-		if ( $result !== false ) {
+		// update_post_meta returns false when the value is unchanged, so we need to check differently
+		$saved_data = get_post_meta( $post_id, '_pds_seating_plan', true );
+		if ( $saved_data === $seating_data ) {
 			wp_send_json_success( 'Seating plan saved successfully' );
 		} else {
 			wp_send_json_error( 'Failed to save seating plan' );

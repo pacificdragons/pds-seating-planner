@@ -52,6 +52,13 @@
     while (seatingData.boats.length < actualBoatCount) {
       seatingData.boats.push({});
     }
+    
+    // Convert arrays to objects if needed (for backward compatibility)
+    for (var i = 0; i < seatingData.boats.length; i++) {
+      if (Array.isArray(seatingData.boats[i])) {
+        seatingData.boats[i] = {};
+      }
+    }
 
     // Load seating arrangement
     if (existingData) {

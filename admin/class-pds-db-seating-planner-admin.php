@@ -311,12 +311,23 @@ class Pds_Db_Seating_Planner_Admin {
 		// Save the data
 		$result = update_post_meta( $post_id, '_pds_seating_plan', $seating_data );
 
-		// update_post_meta returns false when the value is unchanged, so we need to check differently
+		// Debug logging
+		error_log( 'DEBUG: post_id=' . $post_id );
+		error_log( 'DEBUG: seating_data=' . $seating_data );
+		error_log( 'DEBUG: update_post_meta result=' . var_export( $result, true ) );
+
+		// Check if the save was successful by verifying the data exists
 		$saved_data = get_post_meta( $post_id, '_pds_seating_plan', true );
-		if ( $saved_data === $seating_data ) {
+		error_log( 'DEBUG: saved_data=' . var_export( $saved_data, true ) );
+		
+		// Decode both and compare the actual data structure instead of string comparison
+		$saved_decoded = json_decode( $saved_data, true );
+		$sent_decoded = json_decode( $seating_data, true );
+		
+		if ( $saved_decoded !== null && $saved_decoded == $sent_decoded ) {
 			wp_send_json_success( 'Seating plan saved successfully' );
 		} else {
-			wp_send_json_error( 'Failed to save seating plan' );
+			wp_send_json_error( 'Failed to save seating plan: data mismatch' );
 		}
 	}
 

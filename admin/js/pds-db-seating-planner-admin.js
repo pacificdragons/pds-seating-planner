@@ -33,6 +33,11 @@
       }
     }
 
+    // Backwards compatibility: ensure isDraft exists in metadata
+    if (typeof seatingData.metadata.isDraft === "undefined") {
+      seatingData.metadata.isDraft = false;
+    }
+
     // Determine actual boat count based on user preference or default
     if (seatingData.metadata.boat2Visible === false) {
       actualBoatCount = 1; // User explicitly hid boat 2
@@ -67,6 +72,9 @@
 
     // Update global reference for other functions
     boatCount = actualBoatCount;
+
+    // Initialise draft button UI to match loaded state
+    updateDraftButton();
 
     // Make paddler items draggable with touch support
     $(".paddler-item").draggable({
@@ -513,6 +521,30 @@
         },
       });
     });
+
+    // Draft toggle button click handler
+    $("#toggle-draft-mode").on("click", function () {
+      seatingData.metadata.isDraft = !seatingData.metadata.isDraft;
+      updateDraftButton();
+      updateSeatingDataInput();
+    });
+
+    function updateDraftButton() {
+      var isDraft = seatingData.metadata.isDraft;
+      var btn = $("#toggle-draft-mode");
+      var icon = btn.find(".dashicons");
+      if (isDraft) {
+        $("#draft-button-label").text("Draft active – click to publish");
+        icon.removeClass("dashicons-hidden").addClass("dashicons-visibility");
+        btn.addClass("button-draft-active");
+        $("#draft-status").text("Draft mode: this seating plan will not be shown on the frontend until published.");
+      } else {
+        $("#draft-button-label").text("Set as Draft");
+        icon.removeClass("dashicons-visibility").addClass("dashicons-hidden");
+        btn.removeClass("button-draft-active");
+        $("#draft-status").text("");
+      }
+    }
 
     // Global empty boat button click handler (single boat only)
     $(document).on("click", "#empty-boat", function () {

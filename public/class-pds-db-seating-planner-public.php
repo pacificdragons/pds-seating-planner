@@ -135,6 +135,14 @@ class Pds_Db_Seating_Planner_Public {
 			error_log( 'Seating data: ' . $seating_data );
 		}
 
+		// Suppress output if the seating plan is in draft mode
+		if ( ! empty( $seating_data ) ) {
+			$seating_decoded = json_decode( $seating_data, true );
+			if ( ! empty( $seating_decoded['metadata']['isDraft'] ) ) {
+				return '';
+			}
+		}
+
 		// Start output buffering
 		ob_start();
 

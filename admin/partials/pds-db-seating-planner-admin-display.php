@@ -54,10 +54,15 @@
 		<div id="global-controls">
 			<!-- Global controls will be shown/hidden based on boat count -->
 		</div>
-		<button type="button" id="save-seating-plan" class="button button-primary">
+		<button type="button" id="toggle-draft-mode" class="button button-secondary" style="margin-right: 10px;">
+			<span class="dashicons dashicons-hidden" style="margin-right: 5px;"></span>
+			<span id="draft-button-label">Set as Draft</span>
+		</button>
+		<button type="button" id="save-seating-plan" class="button button-primary" style="margin: 0;">
 			<span class="dashicons dashicons-saved" style="margin-right: 5px;"></span>
 			Save Seating Plan
 		</button>
+		<div id="draft-status" style="margin-top: 5px; font-size: 13px; color: #888;"></div>
 		<div id="save-status" style="margin-top: 10px; font-size: 14px;"></div>
 	</div>
 

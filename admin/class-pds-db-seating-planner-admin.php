@@ -66,10 +66,7 @@ class Pds_Db_Seating_Planner_Admin {
 			return;
 		}
 
-		$css_path = plugin_dir_path( __FILE__ ) . 'css/pds-db-seating-planner-admin.css';
-		$css_ver  = file_exists( $css_path ) ? filemtime( $css_path ) : $this->version;
-
-		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/pds-db-seating-planner-admin.css', array(), $css_ver, 'all' );
+		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/pds-db-seating-planner-admin.css', array(), $this->version, 'all' );
 	}
 
 	/**
@@ -84,12 +81,7 @@ class Pds_Db_Seating_Planner_Admin {
 			return;
 		}
 
-		// Cache-bust on the file's own mtime so edits always ship a fresh URL,
-		// independent of the plugin version constant.
-		$js_path = plugin_dir_path( __FILE__ ) . 'js/pds-db-seating-planner-admin.js';
-		$js_ver  = file_exists( $js_path ) ? filemtime( $js_path ) : $this->version;
-
-		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/pds-db-seating-planner-admin.js', array( 'jquery', 'jquery-ui-draggable', 'jquery-ui-droppable' ), $js_ver, false );
+		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/pds-db-seating-planner-admin.js', array( 'jquery', 'jquery-ui-draggable', 'jquery-ui-droppable' ), $this->version, false );
 
 		// Enqueue jQuery UI Touch Punch for mobile support
 		wp_enqueue_script( 'jquery-ui-touch-punch', 'https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js', array( 'jquery-ui-core' ), '0.2.3', false );

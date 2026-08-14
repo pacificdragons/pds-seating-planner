@@ -33,19 +33,22 @@
       }
     }
 
-    // Backwards compatibility: ensure isDraft exists in metadata
+    // Backwards compatibility: ensure metadata exists and has isDraft
+    if (!seatingData.metadata) {
+      seatingData.metadata = {};
+    }
     if (typeof seatingData.metadata.isDraft === "undefined") {
       seatingData.metadata.isDraft = false;
     }
 
-    // Determine actual boat count based on user preference or default
-    if (seatingData.metadata.boat2Visible === false) {
-      actualBoatCount = 1; // User explicitly hid boat 2
-    } else if (seatingData.metadata.boat2Visible === true) {
-      actualBoatCount = 2; // User explicitly wants boat 2
-    } else {
-      actualBoatCount = defaultBoatCount; // Use default based on paddler count
-    }
+    // Determine actual boat count from the generic boatCount model, falling
+    // back to the legacy boat2Visible flag and finally the paddler-count default.
+    actualBoatCount = resolveInitialBoatCount();
+
+    // Persist the resolved count so every save carries the generic model forward.
+    seatingData.metadata.boatCount = actualBoatCount;
+    // Keep the legacy flag in sync for any older reader still checking it.
+    seatingData.metadata.boat2Visible = actualBoatCount >= 2;
 
     // Initialize boats
     initializeBoats(actualBoatCount);
@@ -129,21 +132,65 @@
       return clone;
     }
 
+    // Index of the last boat that actually holds a paddler, or -1 if none do.
+    function highestPopulatedBoatIndex() {
+      var idx = -1;
+      for (var i = 0; i < seatingData.boats.length; i++) {
+        var boat = seatingData.boats[i];
+        if (boat && typeof boat === "object" && Object.keys(boat).length > 0) {
+          idx = i;
+        }
+      }
+      return idx;
+    }
+
+    // Work out how many boats to show on first render. Prefer the generic
+    // boatCount model; fall back to the legacy boat2Visible flag; otherwise use
+    // the paddler-count default. Never show fewer boats than actually hold data.
+    function resolveInitialBoatCount() {
+      var meta = seatingData.metadata || {};
+      var base;
+      if (typeof meta.boatCount === "number" && meta.boatCount >= 1) {
+        base = meta.boatCount;
+      } else if (meta.boat2Visible === true) {
+        base = 2;
+      } else if (meta.boat2Visible === false) {
+        base = 1;
+      } else {
+        base = defaultBoatCount;
+      }
+      return Math.max(base, highestPopulatedBoatIndex() + 1, 1);
+    }
+
     function setupGlobalControls(count) {
       var globalControls = $("#global-controls");
       globalControls.empty();
 
-      // Check if boat 2 is visible based on metadata
-      var boat2Visible =
-        seatingData.metadata && seatingData.metadata.boat2Visible;
+      // A single boat has no per-boat header, so it needs a global Empty button.
+      if (count === 1) {
+        globalControls.append(
+          '<button type="button" id="empty-boat" class="button button-secondary" style="margin: 5px;">' +
+            '<span class="dashicons dashicons-dismiss" style="margin-right: 5px;"></span>Empty Boat' +
+            "</button>"
+        );
+      }
 
-      var templateId = boat2Visible
-        ? "multi-boat-controls-template"
-        : "single-boat-controls-template";
-      var template = document.getElementById(templateId);
-      var clone = document.importNode(template.content, true);
+      // Always allow adding another boat.
+      globalControls.append(
+        '<button type="button" id="add-boat" class="button button-secondary" style="margin: 5px;">' +
+          '<span class="dashicons dashicons-plus-alt" style="margin-right: 5px;"></span>Add boat' +
+          "</button>"
+      );
 
-      globalControls.append(clone);
+      // Allow removing the last boat once there is more than one.
+      if (count > 1) {
+        globalControls.append(
+          '<button type="button" id="remove-last-boat" class="button button-secondary" style="margin: 5px;">' +
+            '<span class="dashicons dashicons-minus" style="margin-right: 5px;"></span>Remove Boat ' +
+            count +
+            "</button>"
+        );
+      }
     }
 
     function initializeDragDrop() {
@@ -572,13 +619,14 @@
       }
     });
 
-    // Add/Remove boat 2 button click handler
-    $(document).on("click", "#add-remove-boat-2", function () {
-      if (!seatingData.metadata.boat2Visible) {
-        addBoat2();
-      } else {
-        removeBoat2();
-      }
+    // Add-boat button click handler
+    $(document).on("click", "#add-boat", function () {
+      addBoat();
+    });
+
+    // Remove-last-boat button click handler
+    $(document).on("click", "#remove-last-boat", function () {
+      removeLastBoat();
     });
 
     function emptyBoat(boatIndex) {
@@ -642,45 +690,40 @@
       }, 2000);
     }
 
-    function addBoat2() {
-      // Update boat count
-      boatCount = 2;
-      window.boatCount = 2;
+    // Rebuild every boat from the current model so titles, headers and controls
+    // all match the current boatCount, then restore the saved arrangement.
+    function rebuildBoats() {
+      $("#boats-container").empty();
+      for (var i = 0; i < boatCount; i++) {
+        $("#boats-container").append(createBoatFromTemplate(i, boatCount));
+      }
+      initializeDragDrop();
+      loadSeatingArrangement();
+      setupGlobalControls(boatCount);
+    }
 
-      // Set user preference to show boat 2
-      seatingData.metadata.boat2Visible = true;
+    function addBoat() {
+      boatCount = boatCount + 1;
+      window.boatCount = boatCount;
 
-      // Ensure we have boat data arrays
-      while (seatingData.boats.length < 2) {
+      // Record the new count in both the generic and legacy metadata slots.
+      seatingData.metadata.boatCount = boatCount;
+      seatingData.metadata.boat2Visible = boatCount >= 2;
+
+      // Ensure a data object exists for the new boat.
+      while (seatingData.boats.length < boatCount) {
         seatingData.boats.push({});
       }
 
-      // Recreate both boats with proper titles (since we're going from 1 to 2 boats)
-      // Store current seating data to restore after recreation
-      var currentSeatingData = JSON.parse(JSON.stringify(seatingData.boats));
-
-      // Clear and recreate all boats with titles
-      $("#boats-container").empty();
-      for (var i = 0; i < 2; i++) {
-        var boatElement = createBoatFromTemplate(i, 2);
-        $("#boats-container").append(boatElement);
-      }
-
-      // Re-initialize drag/drop for all boats
-      initializeDragDrop();
-
-      // Restore seating arrangement
-      loadSeatingArrangement();
-
-      // Update global controls
-      setupGlobalControls(window.boatCount);
-
+      rebuildBoats();
       updateSeatingDataInput();
 
       // Show feedback
       $("#save-status")
         .html(
-          '<span style="color: #46b450;">✓ Boat 2 added successfully!</span>'
+          '<span style="color: #46b450;">✓ Boat ' +
+            boatCount +
+            " added successfully!</span>"
         )
         .addClass("success");
       setTimeout(function () {
@@ -690,71 +733,78 @@
       }, 2000);
     }
 
-    function removeBoat2() {
+    function removeLastBoat() {
+      if (boatCount <= 1) {
+        return;
+      }
+
+      var lastIndex = boatCount - 1;
+
       if (
-        confirm(
-          "Are you sure you want to remove Boat 2? This will move all assigned paddlers from Boat 2 back to the available list."
+        !confirm(
+          "Are you sure you want to remove Boat " +
+            (lastIndex + 1) +
+            "? This will move all assigned paddlers from that boat back to the available list."
         )
       ) {
-        // Move all paddlers from boat 2 back to available list
-        $('.position-filled[data-boat="1"]').each(function () {
-          var assignedPaddler = $(this).find(".assigned-paddler");
-          var userId = assignedPaddler.data("user-id");
-          var userName = assignedPaddler.find(".paddler-name").text().trim();
-
-          // Add paddler back to available list
-          var paddlerItem = $(
-            '<div class="paddler-item" draggable="true" data-user-id="' +
-              userId +
-              '">' +
-              userName +
-              "</div>"
-          );
-          $("#available-paddlers").append(paddlerItem);
-
-          // Make the new item draggable
-          paddlerItem.draggable({
-            revert: "invalid",
-            helper: "clone",
-            zIndex: 1000,
-            scroll: false,
-            distance: 5,
-            delay: 100,
-          });
-        });
-
-        // Remove boat 2 from DOM
-        $('.boat-container[data-boat="1"]').remove();
-
-        // Update boat count
-        boatCount = 1;
-        window.boatCount = 1;
-
-        // Set user preference to hide boat 2
-        seatingData.metadata.boat2Visible = false;
-
-        // Clear boat 2 seating data
-        if (seatingData.boats.length > 1) {
-          seatingData.boats.splice(1, 1);
-        }
-
-        // Update global controls
-        setupGlobalControls(window.boatCount);
-
-        updateSeatingDataInput();
-
-        // Show feedback
-        $("#save-status")
-          .html(
-            '<span style="color: #46b450;">✓ Boat 2 removed successfully!</span>'
-          )
-          .addClass("success");
-        setTimeout(function () {
-          $("#save-status").fadeOut(300, function () {
-            $(this).html("").show();
-          });
-        }, 2000);
+        return;
       }
+
+      // Move all paddlers from the last boat back to the available list.
+      $('.position-filled[data-boat="' + lastIndex + '"]').each(function () {
+        var assignedPaddler = $(this).find(".assigned-paddler");
+        var userId = assignedPaddler.data("user-id");
+        var userName = assignedPaddler.find(".paddler-name").text().trim();
+
+        // Add paddler back to available list
+        var paddlerItem = $(
+          '<div class="paddler-item" draggable="true" data-user-id="' +
+            userId +
+            '">' +
+            userName +
+            "</div>"
+        );
+        $("#available-paddlers").append(paddlerItem);
+
+        // Make the new item draggable
+        paddlerItem.draggable({
+          revert: "invalid",
+          helper: "clone",
+          zIndex: 1000,
+          scroll: false,
+          distance: 5,
+          delay: 100,
+        });
+      });
+
+      // Drop the boat count and its data.
+      boatCount = boatCount - 1;
+      window.boatCount = boatCount;
+      seatingData.metadata.boatCount = boatCount;
+      seatingData.metadata.boat2Visible = boatCount >= 2;
+
+      if (seatingData.boats.length > boatCount) {
+        seatingData.boats.splice(boatCount);
+      }
+
+      // Rebuild so the remaining boats get the correct titles/headers (e.g.
+      // dropping back to a single boat removes its per-boat header).
+      rebuildBoats();
+      updateSeatingDataInput();
+
+      // Show feedback
+      $("#save-status")
+        .html(
+          '<span style="color: #46b450;">✓ Boat ' +
+            (lastIndex + 1) +
+            " removed successfully!</span>"
+        )
+        .addClass("success");
+      setTimeout(function () {
+        $("#save-status").fadeOut(300, function () {
+          $(this).html("").show();
+        });
+      }, 2000);
     }
 
     function updateSeatingDataInput() {

@@ -106,19 +106,8 @@
 		</div>
 	</template>
 
-	<!-- Global controls templates -->
-	<template id="single-boat-controls-template">
-		<button type="button" id="empty-boat" class="button button-secondary" style="margin: 5px;">
-			<span class="dashicons dashicons-dismiss" style="margin-right: 5px;"></span>Empty Boat
-		</button>
-		<button type="button" id="add-remove-boat-2" class="button button-secondary" style="margin: 5px;">
-			<span class="dashicons dashicons-plus-alt" style="margin-right: 5px;"></span>Add Boat 2
-		</button>
-	</template>
-
-	<template id="multi-boat-controls-template">
-		<button type="button" id="add-remove-boat-2" class="button button-secondary" style="margin-right: 10px;">
-			<span class="dashicons dashicons-minus" style="margin-right: 5px;"></span>Remove Boat 2
-		</button>
-	</template>
+	<!--
+		Global controls (Empty Boat / Add boat / Remove last boat) are built
+		dynamically in JS by setupGlobalControls() based on the current boat count.
+	-->
 </div>

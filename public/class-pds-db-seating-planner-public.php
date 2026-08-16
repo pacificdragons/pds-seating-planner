@@ -135,12 +135,17 @@ class Pds_Db_Seating_Planner_Public {
 			error_log( 'Seating data: ' . $seating_data );
 		}
 
-		// Suppress output if the seating plan is in draft mode
-		if ( ! empty( $seating_data ) ) {
-			$seating_decoded = json_decode( $seating_data, true );
-			if ( ! empty( $seating_decoded['metadata']['isDraft'] ) ) {
-				return '';
-			}
+		// Suppress output if there is no plan, if it is in draft mode, or if
+		// nobody has been assigned to a seat yet — an empty boat is noise on the
+		// front end.
+		$seating_decoded = ! empty( $seating_data ) ? json_decode( $seating_data, true ) : array();
+
+		if ( ! empty( $seating_decoded['metadata']['isDraft'] ) ) {
+			return '';
+		}
+
+		if ( ! $this->has_assigned_paddler( $seating_decoded ) ) {
+			return '';
 		}
 
 		// Start output buffering
@@ -151,6 +156,36 @@ class Pds_Db_Seating_Planner_Public {
 
 		// Return the buffered content
 		return ob_get_clean();
+	}
+
+	/**
+	 * Determine whether a decoded seating plan has at least one seat filled.
+	 *
+	 * The template treats a position as assigned when its userName is non-empty
+	 * (see partials/pds-db-seating-planner-public-display.php). We mirror that
+	 * here so a plan with only empty positions renders nothing.
+	 *
+	 * @since    1.0.0
+	 * @param    array    $seating_decoded    Decoded _pds_seating_plan meta.
+	 * @return   bool                         True if any boat has an assigned paddler.
+	 */
+	private function has_assigned_paddler( $seating_decoded ) {
+		if ( empty( $seating_decoded['boats'] ) || ! is_array( $seating_decoded['boats'] ) ) {
+			return false;
+		}
+
+		foreach ( $seating_decoded['boats'] as $boat_data ) {
+			if ( ! is_array( $boat_data ) ) {
+				continue;
+			}
+			foreach ( $boat_data as $position ) {
+				if ( is_array( $position ) && ! empty( $position['userName'] ) ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 }

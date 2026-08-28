@@ -25,7 +25,7 @@
 		<div id="available-paddlers">
 			<?php if ( ! empty( $event_users ) ) : ?>
 				<?php foreach ( $event_users as $user ) : ?>
-					<div class="paddler-item" draggable="true" data-user-id="<?php echo esc_attr( $user->ID ); ?>">
+					<div class="paddler-item" draggable="true" data-user-id="<?php echo esc_attr( $user->ID ); ?>" data-gender="<?php echo esc_attr( isset( $user->gender ) ? $user->gender : '' ); ?>">
 						<?php echo esc_html( $user->display_name ); ?>
 					</div>
 				<?php endforeach; ?>
@@ -62,6 +62,10 @@
 		<div id="global-controls">
 			<!-- Global controls will be shown/hidden based on boat count -->
 		</div>
+		<button type="button" id="boat-load" class="button button-secondary" style="margin-right: 10px;">
+			<span class="dashicons dashicons-groups" style="margin-right: 5px;"></span>
+			Boat Load
+		</button>
 		<button type="button" id="toggle-draft-mode" class="button button-secondary" style="margin-right: 10px;">
 			<span class="dashicons dashicons-hidden" style="margin-right: 5px;"></span>
 			<span id="draft-button-label">Set as Draft</span>
@@ -76,6 +80,17 @@
 
 	<!-- Hidden input to store seating data -->
 	<input type="hidden" name="seating_plan_data" id="seating-plan-data" value="<?php echo esc_attr( $seating_data ); ?>" />
+
+	<?php
+	// A complete userId => gender map for every confirmed paddler, so Boat Load
+	// can split by gender even for paddlers already seated (whose available-list
+	// item, and thus its data-gender attribute, isn't present in the DOM).
+	$paddler_genders = array();
+	foreach ( $event_users as $u ) {
+		$paddler_genders[ $u->ID ] = isset( $u->gender ) ? $u->gender : '';
+	}
+	?>
+	<input type="hidden" id="paddler-genders" value="<?php echo esc_attr( wp_json_encode( (object) $paddler_genders ) ); ?>" />
 
 	<!-- Boat template -->
 	<template id="boat-template">

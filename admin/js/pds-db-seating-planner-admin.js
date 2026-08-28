@@ -33,6 +33,17 @@
       }
     }
 
+    // Complete userId -> gender ("male" | "female" | "") map for every
+    // confirmed paddler, injected by the server. Used by Boat Load to split
+    // paddlers by gender; authoritative even for paddlers currently seated
+    // (whose available-list item, with its data-gender, isn't in the DOM).
+    var genderById = {};
+    try {
+      genderById = JSON.parse($("#paddler-genders").val() || "{}") || {};
+    } catch (e) {
+      genderById = {};
+    }
+
     // Backwards compatibility: ensure metadata exists and has isDraft
     if (!seatingData.metadata) {
       seatingData.metadata = {};
@@ -810,6 +821,213 @@
           $(this).html("").show();
         });
       }, 2000);
+    }
+
+    // ---- Boat Load: auto-fill boats by gender -----------------------------
+    //
+    // Splits confirmed paddlers into a men's boat (Boat 1) and a women's boat
+    // (Boat 2), filling each from row 2 downward (skipping row 1, drummer and
+    // steerer): left-2, right-2, left-3, right-3 ... left-10, right-10, in the
+    // server's alphabetical order. Paddlers that don't fit, or have no gender
+    // on file, are left in the available list unassigned.
+
+    $(document).on("click", "#boat-load", function () {
+      var hasArrangement = $(".position-filled").length > 0;
+      if (
+        hasArrangement &&
+        !confirm(
+          "Boat Load will clear the current seating and auto-fill boats by " +
+            "gender (men → Boat 1, women → Boat 2). Continue?"
+        )
+      ) {
+        return;
+      }
+      boatLoad();
+    });
+
+    function boatLoad() {
+      // Fresh load: return everyone to the available list first.
+      emptyAllBoatsForLoad();
+
+      // Group the now-available paddlers by gender.
+      var men = [];
+      var women = [];
+      var unknown = [];
+      $("#available-paddlers .paddler-item").each(function () {
+        var userId = $(this).data("user-id");
+        var userName = $(this).text().trim();
+        var gender = (genderById[String(userId)] || "").toLowerCase();
+        var entry = { userId: userId, userName: userName };
+        if (gender === "male") men.push(entry);
+        else if (gender === "female") women.push(entry);
+        else unknown.push(entry);
+      });
+
+      // Seat alphabetically by name, independent of the available list's order
+      // (a re-load appends freed paddlers to the end, scrambling DOM order).
+      var byName = function (a, b) {
+        return a.userName.localeCompare(b.userName);
+      };
+      men.sort(byName);
+      women.sort(byName);
+
+      // Men -> Boat 1, Women -> Boat 2. Make sure a second boat exists when
+      // there are women to seat.
+      if (women.length > 0) {
+        ensureBoatCount(2);
+      }
+
+      var seq = boatSeatSequence();
+      var menPlaced = fillBoatFromList(0, men, seq);
+      var womenPlaced = women.length > 0 ? fillBoatFromList(1, women, seq) : 0;
+
+      updateSeatingDataInput();
+
+      // Report what happened.
+      var parts = [menPlaced + " male → Boat 1"];
+      if (women.length > 0) parts.push(womenPlaced + " female → Boat 2");
+      var overflow = men.length - menPlaced + (women.length - womenPlaced);
+      var extras = [];
+      if (overflow > 0) extras.push(overflow + " didn't fit (left available)");
+      if (unknown.length > 0)
+        extras.push(unknown.length + " skipped (no gender on file)");
+      var msg = "✓ Boat loaded: " + parts.join(", ") + ".";
+      if (extras.length) msg += " " + extras.join("; ") + ".";
+
+      $("#save-status")
+        .html(
+          '<span style="color: #46b450;">' +
+            msg +
+            " Remember to Save.</span>"
+        )
+        .addClass("success");
+    }
+
+    // Left-then-right, rows 2..10 — the fill order for Boat Load.
+    function boatSeatSequence() {
+      var seq = [];
+      for (var r = 2; r <= 10; r++) {
+        seq.push("left-" + r);
+        seq.push("right-" + r);
+      }
+      return seq;
+    }
+
+    // Assign a single paddler to a specific boat position (DOM + model), and
+    // remove them from the available list. Returns false if the position DOM
+    // isn't present. Mirrors loadSeatingArrangement()'s assignment markup.
+    function fillPositionWithPaddler(boatIndex, position, userId, userName) {
+      var positionElement = $(
+        '.position[data-position="' +
+          position +
+          '"][data-boat="' +
+          boatIndex +
+          '"]'
+      );
+      if (!positionElement.length) return false;
+
+      positionElement.html(
+        '<span class="assigned-paddler draggable" data-user-id="' +
+          userId +
+          '"><span class="paddler-name">' +
+          userName +
+          '</span><span class="remove-paddler"><span class="dashicons dashicons-dismiss"></span></span></span>'
+      );
+      positionElement.addClass("position-filled");
+      positionElement.find(".assigned-paddler").draggable({
+        revert: "invalid",
+        helper: "clone",
+        zIndex: 1000,
+        scroll: false,
+        distance: 5,
+        delay: 100,
+      });
+
+      if (!seatingData.boats[boatIndex]) seatingData.boats[boatIndex] = {};
+      seatingData.boats[boatIndex][position] = {
+        userId: userId,
+        userName: userName,
+      };
+
+      $(
+        '#available-paddlers .paddler-item[data-user-id="' + userId + '"]'
+      ).remove();
+      return true;
+    }
+
+    // Seat paddlers from `list` into `boatIndex` following `seq`. Stops when the
+    // list or the seats run out; returns how many were placed.
+    function fillBoatFromList(boatIndex, list, seq) {
+      var placed = 0;
+      for (var i = 0; i < list.length && i < seq.length; i++) {
+        if (
+          fillPositionWithPaddler(
+            boatIndex,
+            seq[i],
+            list[i].userId,
+            list[i].userName
+          )
+        ) {
+          placed++;
+        }
+      }
+      return placed;
+    }
+
+    // Move every seated paddler back to the available list and clear the model,
+    // with no per-boat confirm or status noise (Boat Load drives its own UI).
+    function emptyAllBoatsForLoad() {
+      $(".position-filled").each(function () {
+        var position = $(this).data("position");
+        var assignedPaddler = $(this).find(".assigned-paddler");
+        var userId = assignedPaddler.data("user-id");
+        var userName = assignedPaddler.find(".paddler-name").text().trim();
+        returnPaddlerToAvailable(userId, userName);
+        $(this).html(
+          '<span class="position-label">' + getPositionLabel(position) + "</span>"
+        );
+        $(this).removeClass("position-filled");
+      });
+      for (var b = 0; b < seatingData.boats.length; b++) {
+        seatingData.boats[b] = {};
+      }
+    }
+
+    // Append a draggable paddler item back to the available list, carrying its
+    // gender so a subsequent Boat Load can still classify it.
+    function returnPaddlerToAvailable(userId, userName) {
+      var paddlerItem = $(
+        '<div class="paddler-item" draggable="true" data-user-id="' +
+          userId +
+          '" data-gender="' +
+          (genderById[String(userId)] || "") +
+          '">' +
+          userName +
+          "</div>"
+      );
+      $("#available-paddlers").append(paddlerItem);
+      paddlerItem.draggable({
+        revert: "invalid",
+        helper: "clone",
+        zIndex: 1000,
+        scroll: false,
+        distance: 5,
+        delay: 100,
+      });
+    }
+
+    // Grow the layout to at least `minCount` boats (never shrinks), keeping the
+    // metadata and boat model in sync, then rebuild so the new boat renders.
+    function ensureBoatCount(minCount) {
+      if (boatCount >= minCount) return;
+      boatCount = minCount;
+      window.boatCount = boatCount;
+      seatingData.metadata.boatCount = boatCount;
+      seatingData.metadata.boat2Visible = boatCount >= 2;
+      while (seatingData.boats.length < boatCount) {
+        seatingData.boats.push({});
+      }
+      rebuildBoats();
     }
 
     function updateSeatingDataInput() {

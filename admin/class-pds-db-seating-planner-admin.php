@@ -162,7 +162,17 @@ class Pds_Db_Seating_Planner_Admin {
 			ORDER BY u.display_name ASC
 		", $event_id);
 
-		return $wpdb->get_results( $query );
+		$users = $wpdb->get_results( $query );
+
+		// Attach each paddler's gender (ACF `user_gender` meta, stored as
+		// "Male"/"Female") normalised to lowercase "male"/"female"/"" so the
+		// Boat Load feature can split paddlers into a men's and women's boat.
+		foreach ( $users as $user ) {
+			$raw = strtolower( (string) get_user_meta( $user->ID, 'user_gender', true ) );
+			$user->gender = ( 'male' === $raw || 'female' === $raw ) ? $raw : '';
+		}
+
+		return $users;
 	}
 
 	/**

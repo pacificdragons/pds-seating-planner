@@ -38,7 +38,7 @@
 	<div class="dragon-boat-layout" style="background: #f9f9f9; padding: 20px; border-radius: 8px;">
 		<div class="seating-scale-controls">
 			<label for="seating-scale">Scale</label>
-			<input type="range" id="seating-scale" min="50" max="100" step="5" value="100"
+			<input type="range" id="seating-scale" min="25" max="100" step="5" value="100"
 				autocomplete="off" />
 			<span id="seating-scale-value">100%</span>
 			<button type="button" id="seating-scale-reset" class="button button-small">Reset</button>

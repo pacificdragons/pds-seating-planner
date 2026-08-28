@@ -309,13 +309,15 @@
 	}
 
 	.position {
-		/* Honour --sp-scale but never shrink a drop target below a tappable 32px. */
-		min-height: max(32px, calc(44px * var(--sp-scale)));
+		/* Honour --sp-scale down to a small floor so the whole layout can be
+		 * shrunk to fit several boats on a narrow screen. The floor keeps a
+		 * drop target just large enough to still be draggable at min zoom. */
+		min-height: max(22px, calc(44px * var(--sp-scale)));
 	}
 
 	.assigned-paddler {
-		min-width: max(80px, calc(100px * var(--sp-scale)));
-		min-height: max(32px, calc(40px * var(--sp-scale)));
+		min-width: max(36px, calc(100px * var(--sp-scale)));
+		min-height: max(22px, calc(40px * var(--sp-scale)));
 	}
 
 	.remove-paddler {
@@ -365,16 +367,23 @@
 		padding: 15px 10px !important;
 	}
 
-	/* Stack boats vertically on mobile */
+	/* Keep boats side by side on mobile and let them wrap. Scaling the layout
+	 * down (via the scale control) is what makes several boats fit per row. */
 	.boats-container {
-		flex-direction: column;
-		gap: 20px;
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: calc(16px * var(--sp-scale));
+		justify-content: flex-start;
 	}
 
 	.boat-container {
-		padding: 0 5px;
-		min-width: unset;
-		max-width: 100%;
+		/* Size each boat to the current scale so more fit across a phone. */
+		flex: 0 0 auto;
+		width: calc(300px * var(--sp-scale));
+		min-width: 0;
+		max-width: none;
+		padding: 0 3px;
+		margin: 0;
 	}
 
 	.boat-header {
@@ -404,7 +413,7 @@
 
 	.paddler-position {
 		max-width: none;
-		min-width: max(60px, calc(80px * var(--sp-scale)));
+		min-width: max(30px, calc(80px * var(--sp-scale)));
 		font-size: calc(10px * var(--sp-scale));
 	}
 
@@ -416,8 +425,8 @@
 
 	.drummer-position,
 	.steersperson-position {
-		min-width: max(80px, calc(100px * var(--sp-scale)));
-		min-height: max(32px, calc(40px * var(--sp-scale)));
+		min-width: max(36px, calc(100px * var(--sp-scale)));
+		min-height: max(22px, calc(40px * var(--sp-scale)));
 		font-size: calc(11px * var(--sp-scale));
 	}
 
@@ -447,8 +456,8 @@
 	}
 
 	.paddler-position {
-		min-width: max(48px, calc(60px * var(--sp-scale)));
-		height: max(28px, calc(32px * var(--sp-scale)));
+		min-width: max(26px, calc(60px * var(--sp-scale)));
+		height: max(20px, calc(32px * var(--sp-scale)));
 		font-size: calc(9px * var(--sp-scale));
 	}
 
@@ -460,14 +469,14 @@
 
 	.drummer-position,
 	.steersperson-position {
-		min-width: max(60px, calc(80px * var(--sp-scale)));
-		min-height: max(28px, calc(32px * var(--sp-scale)));
+		min-width: max(30px, calc(80px * var(--sp-scale)));
+		min-height: max(20px, calc(32px * var(--sp-scale)));
 		font-size: calc(10px * var(--sp-scale));
 	}
 
 	.assigned-paddler {
-		min-width: max(60px, calc(80px * var(--sp-scale)));
-		min-height: max(28px, calc(32px * var(--sp-scale)));
+		min-width: max(30px, calc(80px * var(--sp-scale)));
+		min-height: max(20px, calc(32px * var(--sp-scale)));
 		font-size: calc(8px * var(--sp-scale));
 	}
 

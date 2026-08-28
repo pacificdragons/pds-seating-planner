@@ -1039,7 +1039,7 @@
     // so an operator's chosen zoom sticks across events, independent of any
     // individual event's saved plan.
     var SCALE_STORAGE_KEY = "pdsSeatingScale";
-    var SCALE_MIN = 50;
+    var SCALE_MIN = 25;
     var SCALE_MAX = 100;
 
     function clampScale(pct) {

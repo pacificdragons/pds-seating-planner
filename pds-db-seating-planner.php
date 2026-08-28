@@ -16,7 +16,7 @@
  * Plugin Name:       PD DB Seating Planner
  * Plugin URI:        https://git@github.com:pacificdragons/pds-seating-planner.git
  * Description:       Allows Session Leads to arrange the seating of paddlers.
- * Version:           1.3.0
+ * Version:           1.3.2
  * Author:            Simon Douglas
  * Author URI:        https://pacificdragons.com.au/
  * License:           GPL-2.0+
@@ -35,7 +35,7 @@ if ( ! defined( 'WPINC' ) ) {
  * Start at version 1.0.0 and use SemVer - https://semver.org
  * Rename this for your plugin and update it as you release new versions.
  */
-define( 'PDS_DB_SEATING_PLANNER_VERSION', '1.3.0' );
+define( 'PDS_DB_SEATING_PLANNER_VERSION', '1.3.2' );
 
 /**
  * The code that runs during plugin activation.

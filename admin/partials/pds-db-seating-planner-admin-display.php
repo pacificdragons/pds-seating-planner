@@ -13,7 +13,7 @@
  */
 ?>
 
-<div id="pds-seating-planner">
+<div id="pds-seating-planner-app">
 	<?php if ( ! empty( $booking_validation_message ) ) : ?>
 		<div class="notice notice-warning is-dismissible" style="margin-bottom: 15px;">
 			<p><strong>Booking Status Update:</strong> <?php echo esc_html( $booking_validation_message ); ?></p>
@@ -36,6 +36,14 @@
 	</div>
 
 	<div class="dragon-boat-layout" style="background: #f9f9f9; padding: 20px; border-radius: 8px;">
+		<div class="seating-scale-controls">
+			<label for="seating-scale">Scale</label>
+			<input type="range" id="seating-scale" min="50" max="100" step="5" value="100"
+				autocomplete="off" />
+			<span id="seating-scale-value">100%</span>
+			<button type="button" id="seating-scale-reset" class="button button-small">Reset</button>
+		</div>
+
 		<div id="boats-container" class="boats-container">
 			<!-- Boats will be generated dynamically by JavaScript -->
 		</div>

@@ -10,7 +10,7 @@
 
   $(document).ready(function () {
     // Only initialize if we're on a page with the seating planner
-    if ($("#pds-seating-planner").length === 0) return;
+    if ($("#pds-seating-planner-app").length === 0) return;
 
     var seatingData = {
       boats: [],
@@ -78,6 +78,11 @@
 
     // Initialise draft button UI to match loaded state
     updateDraftButton();
+
+    // Wire up the scale control (shrinks the whole boat layout so more boats
+    // fit per row on narrow desktops). This is a per-user view preference, not
+    // part of the saved seating plan, so it lives in localStorage.
+    setupScaleControl();
 
     // Make paddler items draggable with touch support
     $(".paddler-item").draggable({
@@ -809,6 +814,81 @@
 
     function updateSeatingDataInput() {
       $("#seating-plan-data").val(JSON.stringify(seatingData));
+    }
+
+    // Scale control: reads/writes the --sp-scale CSS variable that drives the
+    // proportional (real-pixel) shrink of the boat layout. Kept in localStorage
+    // so an operator's chosen zoom sticks across events, independent of any
+    // individual event's saved plan.
+    var SCALE_STORAGE_KEY = "pdsSeatingScale";
+    var SCALE_MIN = 50;
+    var SCALE_MAX = 100;
+
+    function clampScale(pct) {
+      if (isNaN(pct)) return 100;
+      return Math.min(SCALE_MAX, Math.max(SCALE_MIN, pct));
+    }
+
+    function setupScaleControl() {
+      var slider = $("#seating-scale");
+      if (slider.length === 0) return;
+
+      // Persist ONLY on a genuine user gesture. The browser's form-state
+      // restoration can silently reset the slider on load AND fire a change
+      // event; if we treated that as user input it would overwrite (corrupt)
+      // the saved preference with the browser's remembered value. userTouched
+      // is only flipped by real pointer/keyboard interaction with the slider.
+      var userTouched = false;
+      slider.on("pointerdown mousedown touchstart keydown", function () {
+        userTouched = true;
+      });
+
+      slider.on("input change", function () {
+        var pct = clampScale(parseInt($(this).val(), 10));
+        applyScale(pct);
+        if (userTouched) writeStoredScale(pct);
+      });
+
+      $("#seating-scale-reset").on("click", function () {
+        slider.val(100);
+        applyScale(100);
+        writeStoredScale(100);
+      });
+
+      // localStorage is authoritative for the scale. Re-assert it on pageshow
+      // as well as on first run, so neither the browser's form restoration nor
+      // a bfcache restore can leave a stale scale on screen.
+      function restoreScale() {
+        var pct = clampScale(parseInt(readStoredScale(), 10));
+        slider.val(pct);
+        applyScale(pct);
+      }
+      restoreScale();
+      $(window).on("pageshow", restoreScale);
+    }
+
+    function applyScale(pct) {
+      var planner = document.getElementById("pds-seating-planner-app");
+      if (planner) {
+        planner.style.setProperty("--sp-scale", pct / 100);
+      }
+      $("#seating-scale-value").text(pct + "%");
+    }
+
+    function readStoredScale() {
+      try {
+        return window.localStorage.getItem(SCALE_STORAGE_KEY);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function writeStoredScale(pct) {
+      try {
+        window.localStorage.setItem(SCALE_STORAGE_KEY, pct);
+      } catch (e) {
+        // Ignore storage failures (private mode, disabled storage, etc.)
+      }
     }
 
     function loadSeatingArrangement() {

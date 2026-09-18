@@ -328,6 +328,13 @@ class Pds_Db_Seating_Planner_Admin {
 		// Using wp_json_encode to ensure consistent formatting
 		$seating_data = wp_json_encode( $decoded_data );
 
+		// Persist the free-form coaching notes alongside the seating plan so the
+		// "Save Seating Plan" button captures them too (they also save on the
+		// normal post update). Never rendered on the front end.
+		if ( isset( $_POST['coaching_notes'] ) ) {
+			update_post_meta( $post_id, '_pds_coaching_notes', sanitize_textarea_field( wp_unslash( $_POST['coaching_notes'] ) ) );
+		}
+
 		// Save the data
 		$result = update_post_meta( $post_id, '_pds_seating_plan', $seating_data );
 

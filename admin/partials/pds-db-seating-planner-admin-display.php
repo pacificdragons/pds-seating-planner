@@ -65,7 +65,7 @@
 	-->
 	<div class="coaching-notes" style="margin-top: 20px;">
 		<h4 style="margin-bottom: 6px;">Coaching Notes</h4>
-		<p class="description" style="margin: 0 0 8px;">Private notes for coaches and session leads. Never shown on the public seating plan. Click <strong>Update</strong> to save.</p>
+		<p class="description" style="margin: 0 0 8px;">Private notes for coaches and session leads. Never shown on the public seating plan. Saved with either <strong>Save Seating Plan</strong> or the post <strong>Update</strong> button.</p>
 		<textarea name="pds_coaching_notes" id="pds-coaching-notes" rows="6" style="width: 100%; box-sizing: border-box;" placeholder="e.g. rotation plan, technique focus, paddlers to watch…"><?php echo esc_textarea( $coaching_notes ); ?></textarea>
 	</div>
 

@@ -530,6 +530,7 @@
         action: "pds_save_seating_plan",
         post_id: postId,
         seating_data: seatingDataString,
+        coaching_notes: $("#pds-coaching-notes").val(),
         nonce: $("#pds_seating_planner_nonce_field").val(),
       };
 

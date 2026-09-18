@@ -128,6 +128,10 @@ class Pds_Db_Seating_Planner_Admin {
 		$event_users = $this->get_event_users( $post->ID );
 		$original_seating_data = get_post_meta( $post->ID, '_pds_seating_plan', true );
 
+		// Free-form coaching notes for session leads. Stored separately from the
+		// seating plan and never rendered on the front end.
+		$coaching_notes = get_post_meta( $post->ID, '_pds_coaching_notes', true );
+
 		// Validate and clean seating data before rendering
 		$seating_data = $this->validate_seating_data( $original_seating_data, $event_users );
 
@@ -198,6 +202,12 @@ class Pds_Db_Seating_Planner_Admin {
 		if ( isset( $_POST['seating_plan_data'] ) ) {
 			$seating_data = sanitize_text_field( $_POST['seating_plan_data'] );
 			update_post_meta( $post_id, '_pds_seating_plan', $seating_data );
+		}
+
+		// Free-form coaching notes — a plain post-meta custom field. Saved on the
+		// normal post update; never output on the front end.
+		if ( isset( $_POST['pds_coaching_notes'] ) ) {
+			update_post_meta( $post_id, '_pds_coaching_notes', sanitize_textarea_field( wp_unslash( $_POST['pds_coaching_notes'] ) ) );
 		}
 	}
 

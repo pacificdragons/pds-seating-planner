@@ -57,6 +57,18 @@
 		</div>
 	</div>
 
+	<!--
+		Coaching notes: private, free-form notes for session leads / coaches.
+		Saved to the _pds_coaching_notes post meta on the normal post update and
+		never rendered on the front end (the public shortcode only reads
+		_pds_seating_plan).
+	-->
+	<div class="coaching-notes" style="margin-top: 20px;">
+		<h4 style="margin-bottom: 6px;">Coaching Notes</h4>
+		<p class="description" style="margin: 0 0 8px;">Private notes for coaches and session leads. Never shown on the public seating plan. Click <strong>Update</strong> to save.</p>
+		<textarea name="pds_coaching_notes" id="pds-coaching-notes" rows="6" style="width: 100%; box-sizing: border-box;" placeholder="e.g. rotation plan, technique focus, paddlers to watch…"><?php echo esc_textarea( $coaching_notes ); ?></textarea>
+	</div>
+
 	<!-- Action buttons -->
 	<div class="action-buttons" style="margin-top: 20px; text-align: center; padding-top: 15px; border-top: 1px solid #ddd;">
 		<div id="global-controls">

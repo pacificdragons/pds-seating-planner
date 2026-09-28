@@ -294,3 +294,21 @@
 		font-size: 9px;
 	}
 }
+
+/* Coach-only draft preview: dim the plan, keep the notice legible. */
+.pds-seating-planner-draft-notice {
+	max-width: 550px;
+	margin: 0 auto 12px;
+	padding: 8px 12px;
+	border: 1px solid #ffe69c;
+	border-radius: 6px;
+	background: #fff3cd;
+	color: #664d03;
+	font-size: 13px;
+	font-weight: bold;
+	text-align: center;
+}
+
+.pds-seating-planner-draft #pds-seating-planner-public {
+	opacity: 0.5;
+}

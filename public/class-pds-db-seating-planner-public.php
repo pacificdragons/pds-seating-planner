@@ -135,15 +135,20 @@ class Pds_Db_Seating_Planner_Public {
 			error_log( 'Seating data: ' . $seating_data );
 		}
 
-		// Suppress output if there is no plan, if it is in draft mode, or if
-		// nobody has been assigned to a seat yet — an empty boat is noise on the
-		// front end.
 		$seating_decoded = ! empty( $seating_data ) ? json_decode( $seating_data, true ) : array();
 
-		if ( ! empty( $seating_decoded['metadata']['isDraft'] ) ) {
+		$is_draft = ! empty( $seating_decoded['metadata']['isDraft'] );
+
+		// Draft plans are hidden from paddlers. Dragon boat coaches (the
+		// can_coach capability) get a preview so they can review a plan on the
+		// front end before it is published — rendered dimmed and clearly
+		// labelled as a draft (see wrap_draft_preview() below).
+		if ( $is_draft && ! current_user_can( 'can_coach' ) ) {
 			return '';
 		}
 
+		// An empty boat is noise on the front end — require at least one
+		// assigned paddler before rendering anything, draft preview included.
 		if ( ! $this->has_assigned_paddler( $seating_decoded ) ) {
 			return '';
 		}
@@ -154,8 +159,31 @@ class Pds_Db_Seating_Planner_Public {
 		// Include the public display template
 		include plugin_dir_path( __FILE__ ) . 'partials/pds-db-seating-planner-public-display.php';
 
-		// Return the buffered content
-		return ob_get_clean();
+		// Return the buffered content, wrapping a coach draft preview so it
+		// reads clearly as work-in-progress.
+		$output = ob_get_clean();
+
+		if ( $is_draft ) {
+			$output = $this->wrap_draft_preview( $output );
+		}
+
+		return $output;
+	}
+
+	/**
+	 * Wrap a rendered seating plan as a coach-only draft preview: a dimmed
+	 * container introduced by a notice that the plan is not yet published.
+	 *
+	 * @since    1.4.2
+	 * @param    string    $html    The rendered seating plan markup.
+	 * @return   string             The wrapped draft-preview markup.
+	 */
+	private function wrap_draft_preview( $html ) {
+		$notice = '<p class="pds-seating-planner-draft-notice">'
+			. esc_html__( 'Draft — visible to coaches only. This seating plan has not been published to paddlers yet.', 'pds-db-seating-planner' )
+			. '</p>';
+
+		return '<div class="pds-seating-planner-draft">' . $notice . $html . '</div>';
 	}
 
 	/**

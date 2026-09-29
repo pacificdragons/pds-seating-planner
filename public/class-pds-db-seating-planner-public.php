@@ -116,11 +116,24 @@ class Pds_Db_Seating_Planner_Public {
 	 * @param    array     $atts    Shortcode attributes
 	 */
 	public function db_seating_planner_shortcode( $atts ) {
-		
+
+		// Guard against rendering the same event's plan twice in one request.
+		// The [db_seating_planner] shortcode can appear in an event's post
+		// content AND be injected by the theme for coaches
+		// (layouts/event/event-body.php), which would otherwise double it up.
+		// Only a real render consumes the guard; empty returns (draft hidden,
+		// no paddlers) leave it free for a later legitimate call.
+		static $rendered = array();
+
 		// Parse shortcode attributes
 		$atts = shortcode_atts( array(
 			'event_id' => get_the_ID(), // Default to current post ID
 		), $atts, 'db_seating_planner' );
+
+		$event_id = (int) $atts['event_id'];
+		if ( $event_id && isset( $rendered[ $event_id ] ) ) {
+			return '';
+		}
 
 		// Get seating data for the event
 		$seating_data = '';
@@ -165,6 +178,12 @@ class Pds_Db_Seating_Planner_Public {
 
 		if ( $is_draft ) {
 			$output = $this->wrap_draft_preview( $output );
+		}
+
+		// Mark this event as rendered so a second invocation in the same
+		// request (content shortcode + theme injection) returns nothing.
+		if ( $event_id ) {
+			$rendered[ $event_id ] = true;
 		}
 
 		return $output;

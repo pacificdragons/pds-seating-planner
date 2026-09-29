@@ -44,6 +44,25 @@
       genderById = {};
     }
 
+    // userId -> weight (kg) map for every confirmed paddler that has a
+    // `restricted_user_weight` on file, injected by the server. Weight is a
+    // restricted, admin-only field: it is never written into the saved plan
+    // (_pds_seating_plan) and never reaches the public shortcode. It is used
+    // here only to render each seat's weight and the lateral (left vs right)
+    // balance guidance in the metabox.
+    var weightById = {};
+    try {
+      weightById = JSON.parse($("#paddler-weights").val() || "{}") || {};
+    } catch (e) {
+      weightById = {};
+    }
+
+    // Whether the weight/balance overlay is shown. A per-user view preference
+    // (like the scale control), remembered in localStorage — never part of the
+    // saved plan. Default off so the grid is unchanged until asked for.
+    var WEIGHTS_STORAGE_KEY = "pdsSeatingShowWeights";
+    var weightsVisible = readShowWeights();
+
     // Backwards compatibility: ensure metadata exists and has isDraft
     if (!seatingData.metadata) {
       seatingData.metadata = {};
@@ -94,6 +113,9 @@
     // fit per row on narrow desktops). This is a per-user view preference, not
     // part of the saved seating plan, so it lives in localStorage.
     setupScaleControl();
+
+    // Wire the weight/balance overlay toggle and do the first render.
+    setupWeightsControl();
 
     // Make paddler items draggable with touch support
     $(".paddler-item").draggable({
@@ -1033,6 +1055,201 @@
 
     function updateSeatingDataInput() {
       $("#seating-plan-data").val(JSON.stringify(seatingData));
+      // Every seating mutation funnels through here, so this is the single
+      // place the weight/balance overlay needs to re-derive itself.
+      updateBalance();
+    }
+
+    // ---- Paddler weights: lateral balance readout (admin only) -----------
+    //
+    // Renders, on top of the seating grid, a per-row lateral chip (paired rows
+    // show |left - right| colour-scaled; solo rows show that paddler's weight)
+    // and a per-boat side-total/diff line. Fore/aft trim is deliberately
+    // ignored — only lateral balance matters here. Drummer and steerer sit on
+    // the centreline and are excluded from every calculation.
+    //
+    // updateBalance() re-derives the whole overlay from the current DOM and is
+    // idempotent: it removes its own previous output first, so it can be called
+    // after any mutation without tracking individual insert points.
+
+    function readShowWeights() {
+      try {
+        return window.localStorage.getItem(WEIGHTS_STORAGE_KEY) === "1";
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function writeShowWeights(on) {
+      try {
+        window.localStorage.setItem(WEIGHTS_STORAGE_KEY, on ? "1" : "0");
+      } catch (e) {
+        // Ignore storage failures (private mode, disabled storage, etc.)
+      }
+    }
+
+    function setupWeightsControl() {
+      var cb = $("#toggle-weights");
+      if (cb.length === 0) return;
+      cb.prop("checked", weightsVisible);
+      cb.on("change", function () {
+        weightsVisible = $(this).is(":checked");
+        writeShowWeights(weightsVisible);
+        updateBalance();
+      });
+      updateBalance();
+    }
+
+    // Weight (kg) of the paddler in `positionElement`, or null when the seat is
+    // empty or that paddler has no weight on file.
+    function seatWeight(positionElement) {
+      var paddler = positionElement.find(".assigned-paddler");
+      if (!paddler.length) return null;
+      var w = weightById[String(paddler.data("user-id"))];
+      return typeof w === "number" && isFinite(w) ? w : null;
+    }
+
+    function seatFilled(positionElement) {
+      return positionElement.find(".assigned-paddler").length > 0;
+    }
+
+    // Lateral differences read as plain black by default; only a difference
+    // over `redAt` kg is flagged red. A single row (tight) and a whole boat
+    // (looser) pass different thresholds.
+    function balanceBand(diff, redAt) {
+      return diff > redAt ? "bad" : "";
+    }
+
+    function updateBalance() {
+      $("#pds-seating-planner-app").toggleClass("sp-show-weights", weightsVisible);
+
+      // Clear any previous overlay first so this stays idempotent.
+      $(".pds-row-delta, .pds-boat-balance").remove();
+      $(".row-number").removeClass("sp-has-delta");
+      $(".position").removeClass("sp-no-weight");
+
+      if (!weightsVisible) return;
+
+      // Flag every occupied seat whose paddler has no weight on file, so a data
+      // gap reads as grey (matching the "?" chip) instead of the normal blue.
+      $(".position-filled").each(function () {
+        if (seatWeight($(this)) === null) $(this).addClass("sp-no-weight");
+      });
+
+      $(".boat-container").each(function () {
+        var boat = $(this);
+        var leftTotal = 0;
+        var rightTotal = 0;
+        var missing = 0;
+        var seated = 0;
+
+        boat.find(".paddler-row").each(function () {
+          var row = $(this);
+          var leftPos = row.find('.position[data-position^="left-"]');
+          var rightPos = row.find('.position[data-position^="right-"]');
+          var lFilled = seatFilled(leftPos);
+          var rFilled = seatFilled(rightPos);
+          var lw = seatWeight(leftPos);
+          var rw = seatWeight(rightPos);
+
+          if (lFilled) {
+            seated++;
+            if (lw === null) missing++;
+            else leftTotal += lw;
+          }
+          if (rFilled) {
+            seated++;
+            if (rw === null) missing++;
+            else rightTotal += rw;
+          }
+
+          // Show a chip whenever a row has anyone in it. A paired row shows the
+          // lateral difference; a solo paddler shows their own weight (the empty
+          // side counts as 0), which is itself the lateral imbalance for that row.
+          if (lFilled || rFilled) {
+            renderRowDelta(row, lFilled, rFilled, lw, rw);
+          }
+        });
+
+        if (seated > 0) {
+          renderBoatBalance(boat, leftTotal, rightTotal, missing);
+        }
+      });
+    }
+
+    // Lateral chip, stacked under the row number in the centre gutter.
+    //
+    // - Paired row (both seats taken): the lateral difference |left - right|,
+    //   arrow to the heavier side, colour-scaled to flag imbalance.
+    // - Solo row (one seat taken): that paddler's own weight, arrow to their
+    //   side. Shown neutral, not alarm-coloured — it stands in for the seat
+    //   weight rather than warning about a pair that isn't set yet.
+    // - Unknown weight on a seat that's in play: a muted "?".
+    function renderRowDelta(row, lFilled, rFilled, lw, rw) {
+      var center = row.find(".row-number");
+      var arrowLeft = "◀"; // ◀ weight sits on the left
+      var arrowRight = "▶"; // ▶ weight sits on the right
+      var chip;
+
+      if (lFilled && rFilled) {
+        if (lw === null || rw === null) {
+          chip = '<span class="pds-row-delta unknown">?</span>';
+        } else {
+          var diff = Math.round(Math.abs(lw - rw));
+          if (diff === 0) {
+            chip = '<span class="pds-row-delta">0</span>';
+          } else {
+            var arrow = lw > rw ? arrowLeft : arrowRight;
+            chip =
+              '<span class="pds-row-delta ' +
+              balanceBand(diff, 12) +
+              '">' +
+              arrow +
+              " " +
+              diff +
+              "</span>";
+          }
+        }
+      } else {
+        // Solo paddler: show their weight as the row's lateral load.
+        var w = lFilled ? lw : rw;
+        var soloArrow = lFilled ? arrowLeft : arrowRight;
+        if (w === null) {
+          chip = '<span class="pds-row-delta unknown">' + soloArrow + " ?</span>";
+        } else {
+          chip =
+            '<span class="pds-row-delta solo">' +
+            soloArrow +
+            " " +
+            Math.round(w) +
+            "</span>";
+        }
+      }
+
+      center.addClass("sp-has-delta").append(chip);
+    }
+
+    // Per-boat lateral line below the steerer: left total, right total, and the
+    // overall side-to-side difference (arrow to the heavier side).
+    function renderBoatBalance(boat, leftTotal, rightTotal, missing) {
+      var diff = Math.round(Math.abs(leftTotal - rightTotal));
+      var diffText;
+      if (diff === 0) {
+        diffText = "Δ 0";
+      } else {
+        var arrow = leftTotal > rightTotal ? "◀" : "▶";
+        diffText = "Δ " + arrow + " " + diff;
+      }
+      var html =
+        '<div class="pds-boat-balance">' +
+        '<span class="bal-side">L ' + Math.round(leftTotal) + " kg</span>" +
+        '<span class="bal-side">R ' + Math.round(rightTotal) + " kg</span>" +
+        '<span class="bal-diff ' + balanceBand(diff, 20) + '">' + diffText + " kg</span>" +
+        (missing > 0
+          ? '<span class="bal-missing">' + missing + " without weight</span>"
+          : "") +
+        "</div>";
+      boat.append(html);
     }
 
     // Scale control: reads/writes the --sp-scale CSS variable that drives the

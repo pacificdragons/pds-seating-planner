@@ -42,6 +42,11 @@
 				autocomplete="off" />
 			<span id="seating-scale-value">100%</span>
 			<button type="button" id="seating-scale-reset" class="button button-small">Reset</button>
+
+			<label class="sp-weights-toggle" for="toggle-weights" title="Show each paddler's weight and the lateral (left vs right) balance. Admin only — never shown on the front end.">
+				<input type="checkbox" id="toggle-weights" autocomplete="off" />
+				Show weights
+			</label>
 		</div>
 
 		<div id="boats-container" class="boats-container">
@@ -103,6 +108,20 @@
 	}
 	?>
 	<input type="hidden" id="paddler-genders" value="<?php echo esc_attr( wp_json_encode( (object) $paddler_genders ) ); ?>" />
+
+	<?php
+	// A userId => weight (kg) map for confirmed paddlers who have a weight on
+	// file, so the JS can render each seat's weight and the lateral balance.
+	// Paddlers with no weight are simply omitted (rendered as unknown). This is
+	// admin-only data and is never persisted into the seating plan.
+	$paddler_weights = array();
+	foreach ( $event_users as $u ) {
+		if ( isset( $u->weight ) && null !== $u->weight ) {
+			$paddler_weights[ $u->ID ] = (float) $u->weight;
+		}
+	}
+	?>
+	<input type="hidden" id="paddler-weights" value="<?php echo esc_attr( wp_json_encode( (object) $paddler_weights ) ); ?>" />
 
 	<!-- Boat template -->
 	<template id="boat-template">

@@ -171,9 +171,17 @@ class Pds_Db_Seating_Planner_Admin {
 		// Attach each paddler's gender (ACF `user_gender` meta, stored as
 		// "Male"/"Female") normalised to lowercase "male"/"female"/"" so the
 		// Boat Load feature can split paddlers into a men's and women's boat.
+		//
+		// Also attach weight (ACF `restricted_user_weight`, kg) used only for the
+		// admin-side lateral-balance readout. This is a restricted field: it is
+		// never written into the saved plan (_pds_seating_plan) and never sent to
+		// the public shortcode — it is looked up fresh here for the metabox alone.
 		foreach ( $users as $user ) {
 			$raw = strtolower( (string) get_user_meta( $user->ID, 'user_gender', true ) );
 			$user->gender = ( 'male' === $raw || 'female' === $raw ) ? $raw : '';
+
+			$weight_raw    = get_user_meta( $user->ID, 'restricted_user_weight', true );
+			$user->weight  = ( is_numeric( $weight_raw ) && (float) $weight_raw > 0 ) ? (float) $weight_raw : null;
 		}
 
 		return $users;

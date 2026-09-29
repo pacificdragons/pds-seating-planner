@@ -52,6 +52,21 @@
 	font-variant-numeric: tabular-nums;
 }
 
+/* Weight overlay toggle, pushed to the right of the scale-controls bar. */
+.sp-weights-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: auto;
+	font-weight: bold;
+	color: #333;
+	cursor: pointer;
+}
+
+.sp-weights-toggle input {
+	margin: 0;
+}
+
 /* Available paddlers section */
 #available-paddlers {
 	display: flex;
@@ -289,6 +304,78 @@
 
 .ui-draggable-dragging {
 	z-index: 1000 !important;
+}
+
+/* ---- Paddler weights: lateral balance overlay (admin only) ----------- */
+
+/* An occupied seat whose paddler has no weight on file is greyed (matching the
+   "?" unknown chip) instead of the normal blue, so missing data stands out. */
+.sp-show-weights .position-filled.sp-no-weight {
+	background-color: #c3c4c7 !important;
+	border-color: #8c8f94 !important;
+}
+
+.sp-show-weights .position-filled.sp-no-weight .assigned-paddler {
+	color: #1d2327;
+}
+
+/* Lateral delta chip, stacked under the row number in the centre gutter. */
+.sp-show-weights .row-number.sp-has-delta {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	line-height: 1;
+}
+
+.pds-row-delta {
+	padding: 1px 4px;
+	border-radius: 8px;
+	font-size: calc(10px * var(--sp-scale));
+	font-weight: 700;
+	line-height: 1;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+	background: #1d2327; /* black by default; only a big imbalance turns red */
+	color: #fff;
+}
+
+.pds-row-delta.bad { background: #dc3232; }
+.pds-row-delta.unknown { background: #c3c4c7; color: #1d2327; }
+/* Solo paddler's own weight uses the plain black default (no .bad applied). */
+
+/* Boat-level lateral balance line, below the steersperson. */
+.pds-boat-balance {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 8px;
+	margin-top: 12px;
+	padding-top: 10px;
+	border-top: 1px dashed #c3c4c7;
+	font-size: calc(12px * var(--sp-scale));
+	font-variant-numeric: tabular-nums;
+}
+
+.pds-boat-balance .bal-side {
+	font-weight: 700;
+	color: #1d2327;
+}
+
+.pds-boat-balance .bal-diff {
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-weight: 700;
+	background: #1d2327;
+	color: #fff;
+}
+
+.pds-boat-balance .bal-diff.bad { background: #dc3232; }
+
+.pds-boat-balance .bal-missing {
+	color: #b32d2e;
+	font-style: italic;
 }
 
 /* Mobile touch improvements */

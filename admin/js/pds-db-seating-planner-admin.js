@@ -57,6 +57,12 @@
       weightById = {};
     }
 
+    // Base URL for the WP user-edit screen, injected by the server. When the
+    // weights overlay flags a seated paddler with no weight on file, we drop a
+    // link onto that seat deep-linking to their profile's weight field so an
+    // admin can fill the gap without leaving to hunt for the user.
+    var userEditBase = $("#paddler-edit-base").val() || "";
+
     // Whether the weight/balance overlay is shown. A per-user view preference
     // (like the scale control), remembered in localStorage — never part of the
     // saved plan. Default off so the grid is unchanged until asked for.
@@ -1113,6 +1119,32 @@
       return positionElement.find(".assigned-paddler").length > 0;
     }
 
+    // Drop a small "add weight" link onto a seat whose paddler has no
+    // `restricted_user_weight` on file. It deep-links to that paddler's WP
+    // profile at the weight field and opens in a new tab so the unsaved seating
+    // plan isn't lost. Appended to the seat (not the draggable chip) so the drag
+    // helper never clones it and a click here starts no drag. No-op without a
+    // server-supplied edit base or a resolvable user id.
+    function appendFixWeightLink(positionElement) {
+      if (!userEditBase) return;
+      var paddler = positionElement.find(".assigned-paddler");
+      if (!paddler.length) return;
+      var userId = paddler.data("user-id");
+      if (userId === undefined || userId === null || userId === "") return;
+      var sep = userEditBase.indexOf("?") === -1 ? "?" : "&";
+      var href =
+        userEditBase +
+        sep +
+        "user_id=" +
+        encodeURIComponent(userId) +
+        "#restricted_user_weight";
+      $('<a class="sp-fix-weight" target="_blank" rel="noopener"></a>')
+        .attr("href", href)
+        .attr("title", "No weight on file — open this paddler's profile to add it")
+        .html('<span class="dashicons dashicons-edit"></span>')
+        .appendTo(positionElement);
+    }
+
     // Lateral differences read as plain black by default; only a difference
     // over `redAt` kg is flagged red. A single row (tight) and a whole boat
     // (looser) pass different thresholds.
@@ -1124,16 +1156,20 @@
       $("#pds-seating-planner-app").toggleClass("sp-show-weights", weightsVisible);
 
       // Clear any previous overlay first so this stays idempotent.
-      $(".pds-row-delta, .pds-boat-balance").remove();
+      $(".pds-row-delta, .pds-boat-balance, .sp-fix-weight").remove();
       $(".row-number").removeClass("sp-has-delta");
       $(".position").removeClass("sp-no-weight");
 
       if (!weightsVisible) return;
 
       // Flag every occupied seat whose paddler has no weight on file, so a data
-      // gap reads as grey (matching the "?" chip) instead of the normal blue.
+      // gap reads as grey (matching the "?" chip) instead of the normal blue,
+      // and drop a link onto the seat to fix that paddler's weight in place.
       $(".position-filled").each(function () {
-        if (seatWeight($(this)) === null) $(this).addClass("sp-no-weight");
+        if (seatWeight($(this)) === null) {
+          $(this).addClass("sp-no-weight");
+          appendFixWeightLink($(this));
+        }
       });
 
       $(".boat-container").each(function () {

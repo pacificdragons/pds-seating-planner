@@ -309,14 +309,49 @@
 /* ---- Paddler weights: lateral balance overlay (admin only) ----------- */
 
 /* An occupied seat whose paddler has no weight on file is greyed (matching the
-   "?" unknown chip) instead of the normal blue, so missing data stands out. */
+   "?" unknown chip) instead of the normal blue, so missing data stands out.
+   Positioned so the "add weight" link can anchor to the seat corner. */
 .sp-show-weights .position-filled.sp-no-weight {
+	position: relative;
 	background-color: #c3c4c7 !important;
 	border-color: #8c8f94 !important;
 }
 
 .sp-show-weights .position-filled.sp-no-weight .assigned-paddler {
 	color: #1d2327;
+}
+
+/* "Add weight" deep-link dropped onto a no-weight seat (opens the paddler's
+   profile at #restricted_user_weight in a new tab). Sits in the bottom-right
+   corner, clear of the remove (×) button at the top-right. */
+.sp-show-weights .position-filled.sp-no-weight .sp-fix-weight {
+	position: absolute;
+	bottom: -8px;
+	right: -8px;
+	width: 18px;
+	height: 18px;
+	background-color: #2271b1;
+	color: #fff;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 2px solid #fff;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	text-decoration: none;
+	z-index: 11;
+}
+
+.sp-show-weights .position-filled.sp-no-weight .sp-fix-weight:hover {
+	background-color: #135e96;
+	transform: scale(1.1);
+}
+
+.sp-show-weights .position-filled.sp-no-weight .sp-fix-weight .dashicons {
+	width: 12px;
+	height: 12px;
+	font-size: 12px;
+	line-height: 1;
 }
 
 /* Lateral delta chip, stacked under the row number in the centre gutter. */

@@ -123,6 +123,16 @@
 	?>
 	<input type="hidden" id="paddler-weights" value="<?php echo esc_attr( wp_json_encode( (object) $paddler_weights ) ); ?>" />
 
+	<?php
+	// Base URL for the WP user-edit screen. When the weights overlay flags a
+	// seated paddler with no `restricted_user_weight` on file, the JS drops a
+	// small link onto that seat that deep-links to the paddler's profile at the
+	// weight field (#restricted_user_weight) so an admin can fill the gap. The
+	// userId and hash are appended client-side. user-edit.php self-redirects to
+	// profile.php when the id is the current user, so it is safe for everyone.
+	?>
+	<input type="hidden" id="paddler-edit-base" value="<?php echo esc_attr( admin_url( 'user-edit.php' ) ); ?>" />
+
 	<!-- Boat template -->
 	<template id="boat-template">
 		<div class="boat-container" data-boat="">

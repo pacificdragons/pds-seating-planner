@@ -368,6 +368,12 @@
                 helper: "clone",
                 zIndex: 1000,
               });
+
+              // Remove the dropped paddler's source chip from the available
+              // list. Without this, swapping an available paddler onto a filled
+              // seat seats the dropped paddler but leaves its original chip in
+              // the available list, so duplicates build up on every swap.
+              ui.draggable.remove();
             }
           } else if (isAssignedPaddler) {
             // Clear the source position

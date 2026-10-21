@@ -57,6 +57,18 @@
       weightById = {};
     }
 
+    // A paddler holding several tickets is rendered as one seat per space. The
+    // first space uses the bare user id as its token ("123"); extra spaces use
+    // "123#2", "123#3", … so each duplicate seat is tracked independently. These
+    // helpers recover the real user id behind a token (for gender/weight
+    // lookups, which are keyed by the real id) and flag the extra instances.
+    function baseUserId(token) {
+      return String(token).split("#")[0];
+    }
+    function isExtraTicketSeat(token) {
+      return String(token).indexOf("#") !== -1;
+    }
+
     // Base URL for the WP user-edit screen, injected by the server. When the
     // weights overlay flags a seated paddler with no weight on file, we drop a
     // link onto that seat deep-linking to their profile's weight field so an
@@ -891,7 +903,7 @@
       $("#available-paddlers .paddler-item").each(function () {
         var userId = $(this).data("user-id");
         var userName = $(this).text().trim();
-        var gender = (genderById[String(userId)] || "").toLowerCase();
+        var gender = (genderById[baseUserId(userId)] || "").toLowerCase();
         var entry = { userId: userId, userName: userName };
         if (gender === "male") men.push(entry);
         else if (gender === "female") women.push(entry);
@@ -1035,7 +1047,7 @@
         '<div class="paddler-item" draggable="true" data-user-id="' +
           userId +
           '" data-gender="' +
-          (genderById[String(userId)] || "") +
+          (genderById[baseUserId(userId)] || "") +
           '">' +
           userName +
           "</div>"
@@ -1137,6 +1149,9 @@
       if (!paddler.length) return;
       var userId = paddler.data("user-id");
       if (userId === undefined || userId === null || userId === "") return;
+      // Extra-ticket seats (a guest block, "123#2") map to a member who can't
+      // carry a per-guest weight — there's nothing to fix, so don't nag.
+      if (isExtraTicketSeat(userId)) return;
       var sep = userEditBase.indexOf("?") === -1 ? "?" : "&";
       var href =
         userEditBase +

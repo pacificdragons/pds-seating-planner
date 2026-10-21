@@ -25,9 +25,25 @@
 		<div id="available-paddlers">
 			<?php if ( ! empty( $event_users ) ) : ?>
 				<?php foreach ( $event_users as $user ) : ?>
-					<div class="paddler-item" draggable="true" data-user-id="<?php echo esc_attr( $user->ID ); ?>" data-gender="<?php echo esc_attr( isset( $user->gender ) ? $user->gender : '' ); ?>">
-						<?php echo esc_html( $user->display_name ); ?>
-					</div>
+					<?php
+					// A paddler holding several tickets (e.g. a guest block) occupies
+					// $user->spaces seats. Render one chip per space. The first space
+					// keeps the bare user id as its token (so existing saved plans
+					// stay valid); extra spaces get a "123#2", "123#3", … token so
+					// each seat is tracked independently. Extras carry a "(k/n)"
+					// suffix so coaches can tell the duplicate seats apart on the
+					// board; the first chip is left as the plain name.
+					$spaces = isset( $user->spaces ) ? max( 1, (int) $user->spaces ) : 1;
+					for ( $i = 1; $i <= $spaces; $i++ ) :
+						$token = ( 1 === $i ) ? (string) $user->ID : $user->ID . '#' . $i;
+						$label = ( $spaces > 1 && $i > 1 )
+							? $user->display_name . ' (' . $i . '/' . $spaces . ')'
+							: $user->display_name;
+					?>
+						<div class="paddler-item" draggable="true" data-user-id="<?php echo esc_attr( $token ); ?>" data-gender="<?php echo esc_attr( isset( $user->gender ) ? $user->gender : '' ); ?>">
+							<?php echo esc_html( $label ); ?>
+						</div>
+					<?php endfor; ?>
 				<?php endforeach; ?>
 			<?php else : ?>
 				<p class="no-paddlers">No confirmed paddlers found for this event.</p>

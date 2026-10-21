@@ -157,12 +157,19 @@ class Pds_Db_Seating_Planner_Admin {
 			return array();
 		}
 
+		// Sum booking_spaces per paddler so a booking of N spaces (one member
+		// holding several tickets — e.g. a guest block) yields N seats in the
+		// planner. Grouping also collapses the rare case of a paddler holding two
+		// confirmed bookings for the same event, which previously produced two
+		// chips sharing one user id. GROUP BY lists every non-aggregated column so
+		// the query is safe under ONLY_FULL_GROUP_BY.
 		$query = $wpdb->prepare("
-			SELECT DISTINCT u.ID, u.display_name, u.user_email, b.booking_id
+			SELECT u.ID, u.display_name, SUM(b.booking_spaces) AS spaces
 			FROM {$wpdb->users} u
 			INNER JOIN {$wpdb->prefix}em_bookings b ON u.ID = b.person_id
 			WHERE b.event_id = %d
 			AND b.booking_status = 1
+			GROUP BY u.ID, u.display_name
 			ORDER BY u.display_name ASC
 		", $event_id);
 
@@ -177,6 +184,10 @@ class Pds_Db_Seating_Planner_Admin {
 		// never written into the saved plan (_pds_seating_plan) and never sent to
 		// the public shortcode — it is looked up fresh here for the metabox alone.
 		foreach ( $users as $user ) {
+			// Number of seats this paddler occupies (their total confirmed spaces),
+			// clamped to at least 1. The partial renders one chip per space.
+			$user->spaces = max( 1, (int) $user->spaces );
+
 			$raw = strtolower( (string) get_user_meta( $user->ID, 'user_gender', true ) );
 			$user->gender = ( 'male' === $raw || 'female' === $raw ) ? $raw : '';
 
@@ -227,10 +238,17 @@ class Pds_Db_Seating_Planner_Admin {
 			return $seating_data;
 		}
 
-		// Create array of active user IDs for quick lookup
+		// Create array of active user IDs for quick lookup, plus a userId => spaces
+		// map so a seat held by a now-shrunk multi-ticket booking (e.g. a guest
+		// block cut from 3 spaces to 2) can be dropped along with fully cancelled
+		// bookings. Seats are keyed by a per-space token: the first space uses the
+		// bare user id ("123"), extra spaces use "123#2", "123#3", … — see the
+		// admin partial.
 		$active_user_ids = array();
+		$spaces_by_user  = array();
 		foreach ( $active_users as $user ) {
-			$active_user_ids[] = (int) $user->ID;
+			$active_user_ids[]              = (int) $user->ID;
+			$spaces_by_user[ (int) $user->ID ] = isset( $user->spaces ) ? (int) $user->spaces : 1;
 		}
 
 		// Parse seating data
@@ -251,9 +269,17 @@ class Pds_Db_Seating_Planner_Admin {
 
 				foreach ( $boat_data as $position => $user_data ) {
 					if ( isset( $user_data['userId'] ) ) {
-						$user_id = (int) $user_data['userId'];
-						if ( ! in_array( $user_id, $active_user_ids ) ) {
-							// User no longer has active booking - remove from seating plan
+						$token   = (string) $user_data['userId'];
+						$user_id = (int) $token; // "123" or "123#2" both cast to 123
+						// Extra-ticket instance number: "123#2" => 2, bare id => 1.
+						$instance = ( false !== strpos( $token, '#' ) )
+							? (int) substr( $token, strpos( $token, '#' ) + 1 )
+							: 1;
+						$has_booking   = in_array( $user_id, $active_user_ids );
+						$within_spaces = $instance <= ( isset( $spaces_by_user[ $user_id ] ) ? $spaces_by_user[ $user_id ] : 1 );
+						if ( ! $has_booking || ! $within_spaces ) {
+							// Booking cancelled, or this extra ticket no longer exists -
+							// remove from seating plan.
 							unset( $decoded_data['boats'][$boat_index][$position] );
 							$data_updated = true;
 						}

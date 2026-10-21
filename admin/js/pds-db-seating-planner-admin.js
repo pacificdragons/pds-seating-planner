@@ -59,14 +59,11 @@
 
     // A paddler holding several tickets is rendered as one seat per space. The
     // first space uses the bare user id as its token ("123"); extra spaces use
-    // "123#2", "123#3", … so each duplicate seat is tracked independently. These
-    // helpers recover the real user id behind a token (for gender/weight
-    // lookups, which are keyed by the real id) and flag the extra instances.
+    // "123#2", "123#3", … so each duplicate seat is tracked independently. This
+    // recovers the real user id behind a token for gender/weight lookups, which
+    // are keyed by the real id (guest seats inherit the member's weight).
     function baseUserId(token) {
       return String(token).split("#")[0];
-    }
-    function isExtraTicketSeat(token) {
-      return String(token).indexOf("#") !== -1;
     }
 
     // Base URL for the WP user-edit screen, injected by the server. When the
@@ -1129,7 +1126,11 @@
     function seatWeight(positionElement) {
       var paddler = positionElement.find(".assigned-paddler");
       if (!paddler.length) return null;
-      var w = weightById[String(paddler.data("user-id"))];
+      // Extra-ticket guest seats ("123#2") carry no weight of their own, so a
+      // guest block inherits the member's weight: fall back to the base id.
+      var token = paddler.data("user-id");
+      var w = weightById[String(token)];
+      if (typeof w !== "number") w = weightById[baseUserId(token)];
       return typeof w === "number" && isFinite(w) ? w : null;
     }
 
@@ -1149,15 +1150,15 @@
       if (!paddler.length) return;
       var userId = paddler.data("user-id");
       if (userId === undefined || userId === null || userId === "") return;
-      // Extra-ticket seats (a guest block, "123#2") map to a member who can't
-      // carry a per-guest weight — there's nothing to fix, so don't nag.
-      if (isExtraTicketSeat(userId)) return;
+      // A weightless seat links to the member's profile. For an extra-ticket
+      // guest seat ("123#2") that's the base member, whose weight the guest
+      // seats inherit — so filling it resolves every seat that member holds.
       var sep = userEditBase.indexOf("?") === -1 ? "?" : "&";
       var href =
         userEditBase +
         sep +
         "user_id=" +
-        encodeURIComponent(userId) +
+        encodeURIComponent(baseUserId(userId)) +
         "#restricted_user_weight";
       $('<a class="sp-fix-weight" target="_blank" rel="noopener"></a>')
         .attr("href", href)

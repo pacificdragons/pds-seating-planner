@@ -611,20 +611,25 @@
 		margin: 0;
 	}
 
+	/* Keep the header on one line on mobile: the round number badge, the name
+	   input (which flex-grows to fill), then the trashcan — all vertically
+	   centred and never wrapping. (The base rules already lay this out as a row;
+	   the earlier column/stretch override is what stretched the badge into a
+	   full-width bar.) */
 	.boat-header {
-		flex-direction: column;
-		gap: 10px;
-		align-items: stretch;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: center;
+		gap: 8px;
 	}
 
 	.boat-title,
 	.boat-name-input {
 		font-size: calc(15px * var(--sp-scale));
-		text-align: center;
 	}
 
 	.boat-controls {
-		justify-content: center;
+		flex: 0 0 auto;
 		gap: 6px;
 	}
 

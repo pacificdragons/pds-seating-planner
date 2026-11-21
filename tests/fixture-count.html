@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>seat planner boat-count fixture (parametric)</title>
+<!--
+  Parametric fixture for the default-boat-count rule and metadata stamping.
+  Query params drive it, so one file covers every count for both boat types:
+    ?type=dragon|oc6 & n=<available paddler count>
+  An inline script (below, before the app boots) sets #pds-boat-config for the
+  type and appends n available paddlers. The boat COUNT logic doesn't depend on
+  the seat markup, so the boat-template is deliberately minimal.
+-->
+<script>
+  document.ontouchstart = null;
+  document.ontouchmove = null;
+  document.ontouchend = null;
+</script>
+<link rel="stylesheet" href="/admin/css/pds-db-seating-planner-admin.css" />
+<style>.dashicons { display:inline-block; width:1em; height:1em; }</style>
+<script src="/tests/vendor/jquery.min.js"></script>
+<script src="/tests/vendor/jquery-ui.min.js"></script>
+<script src="/tests/vendor/jquery.ui.touch-punch.min.js"></script>
+</head>
+<body>
+<div id="pds-seating-planner-app">
+  <div class="seating-controls"><h4>Available Paddlers</h4><div id="available-paddlers"></div></div>
+  <div class="dragon-boat-layout">
+    <div class="seating-scale-controls">
+      <input type="range" id="seating-scale" min="25" max="100" step="5" value="100" autocomplete="off" />
+      <span id="seating-scale-value">100%</span>
+      <button type="button" id="seating-scale-reset" class="button button-small">Reset</button>
+    </div>
+    <div id="boats-container" class="boats-container"></div>
+  </div>
+  <div class="action-buttons">
+    <div id="global-controls"></div>
+    <button type="button" id="toggle-draft-mode" class="button"><span id="draft-button-label">Set as Draft</span></button>
+    <button type="button" id="save-seating-plan" class="button button-primary">Save</button>
+    <div id="draft-status"></div>
+    <div id="save-status"></div>
+  </div>
+
+  <input type="hidden" name="seating_plan_data" id="seating-plan-data" value="" />
+  <input type="hidden" id="pds-boat-config" value="" />
+
+  <template id="boat-template">
+    <div class="boat-container" data-boat="">
+      <div class="boat-header">
+        <span class="boat-number" aria-hidden="true"></span><input type="text" class="boat-name-input" maxlength="60" autocomplete="off" aria-label="Boat name" />
+        <div class="boat-controls">
+          <button type="button" class="button button-small empty-single-boat" data-boat="" title="Empty this boat" aria-label="Empty this boat"><span class="dashicons dashicons-trash"></span></button>
+        </div>
+      </div>
+      <div class="paddlers-section">
+        <div class="paddler-row">
+          <div class="position paddler-position" data-position="seat-1" data-boat=""><span class="position-label">1</span></div>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<script>
+  // Runs synchronously during parse — before the app's $(document).ready — so
+  // #pds-boat-config and the available paddlers are in place when the app boots.
+  (function () {
+    var p = new URLSearchParams(location.search);
+    var type = p.get("type") === "oc6" ? "oc6" : "dragon";
+    var n = parseInt(p.get("n") || "0", 10);
+    if (isNaN(n) || n < 0) n = 0;
+    var cfg = type === "oc6"
+      ? { type: "oc6", boatCapacity: 6, showWeights: false, showBoatLoad: false, positionLabels: {} }
+      : { type: "dragon", boatCapacity: 21, showWeights: true, showBoatLoad: true, positionLabels: {} };
+    document.getElementById("pds-boat-config").value = JSON.stringify(cfg);
+    var avail = document.getElementById("available-paddlers");
+    for (var i = 1; i <= n; i++) {
+      var d = document.createElement("div");
+      d.className = "paddler-item";
+      d.setAttribute("draggable", "true");
+      d.setAttribute("data-user-id", String(i));
+      d.textContent = "P " + i;
+      avail.appendChild(d);
+    }
+  })();
+</script>
+<script src="/tests/harness.js"></script>
+<script src="/admin/js/pds-db-seating-planner-admin.js"></script>
+</body>
+</html>

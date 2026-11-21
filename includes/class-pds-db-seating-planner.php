@@ -112,6 +112,12 @@ class Pds_Db_Seating_Planner {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-pds-db-seating-planner-i18n.php';
 
 		/**
+		 * Boat-type definitions (Dragon Boat / OC6) shared by the admin metabox
+		 * and the public shortcode.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-pds-db-seating-planner-boats.php';
+
+		/**
 		 * The class responsible for defining all actions that occur in the admin area.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-pds-db-seating-planner-admin.php';

@@ -88,7 +88,25 @@ class Pds_Db_Seating_Planner_Admin {
 	}
 
 	/**
-	 * Add metabox for dragon boat seating planner
+	 * The resolved boat layout type for an event, or null when the event carries
+	 * no planner category (Dragon Boat / OC6) and so gets no metabox.
+	 *
+	 * @param  int $post_id
+	 * @return string|null  'dragon' | 'oc6' | null
+	 */
+	private function boat_type_for_post( $post_id ) {
+		$category_type = Pds_Db_Seating_Planner_Boats::category_type( $post_id );
+		if ( null === $category_type ) {
+			return null;
+		}
+		$decoded = json_decode( get_post_meta( $post_id, '_pds_seating_plan', true ), true );
+		return Pds_Db_Seating_Planner_Boats::resolve_type( $decoded, $category_type );
+	}
+
+	/**
+	 * Add the Seat Planner metabox for events in a planner category (Dragon
+	 * Boat or OC6). The title names the boat type so the layout on screen is
+	 * never a surprise.
 	 */
 	public function add_seating_planner_metabox() {
 		global $post;
@@ -97,26 +115,21 @@ class Pds_Db_Seating_Planner_Admin {
 			return;
 		}
 
-		$event_categories = wp_get_post_terms( $post->ID, 'event-categories' );
-		$is_dragon_boat = false;
-
-		foreach ( $event_categories as $category ) {
-			if ( $category->slug === 'dragon-boat' ) {
-				$is_dragon_boat = true;
-				break;
-			}
+		$boat_type = $this->boat_type_for_post( $post->ID );
+		if ( null === $boat_type ) {
+			return;
 		}
 
-		if ( $is_dragon_boat ) {
-			add_meta_box(
-				'pds-seating-planner',
-				'Dragon Boat Seating Planner',
-				array( $this, 'render_seating_planner_metabox' ),
-				'event',
-				'normal',
-				'high'
-			);
-		}
+		$label = Pds_Db_Seating_Planner_Boats::layout( $boat_type )['label'];
+
+		add_meta_box(
+			'pds-seating-planner',
+			$label . ' Seat Planner',
+			array( $this, 'render_seating_planner_metabox' ),
+			'event',
+			'normal',
+			'high'
+		);
 	}
 
 	/**
@@ -136,6 +149,35 @@ class Pds_Db_Seating_Planner_Admin {
 		if ( $seating_data !== $original_seating_data && current_user_can( 'edit_post', $post->ID ) ) {
 			update_post_meta( $post->ID, '_pds_seating_plan', $seating_data );
 			$booking_validation_message = 'Some paddlers were removed from the seating plan due to cancelled bookings.';
+		}
+
+		// Resolve the layout to render. A populated plan keeps its own stored type
+		// (see Boats::resolve_type) so re-categorising an event never orphans its
+		// seats; an empty plan follows the event category.
+		$category_types = Pds_Db_Seating_Planner_Boats::category_types( $post->ID );
+		$category_type  = empty( $category_types ) ? null : $category_types[0];
+		$boat_type      = Pds_Db_Seating_Planner_Boats::resolve_type(
+			json_decode( $seating_data, true ),
+			$category_type
+		);
+		$layout         = Pds_Db_Seating_Planner_Boats::layout( $boat_type );
+		$boat_positions = Pds_Db_Seating_Planner_Boats::positions( $boat_type );
+		$boat_config    = Pds_Db_Seating_Planner_Boats::js_config( $boat_type );
+
+		// When an event is tagged with BOTH planner categories, the layout is
+		// picked by precedence (Dragon Boat wins). Surface that so a session lead
+		// who expected the other layout understands why — and how to change it.
+		$category_conflict_notice = '';
+		if ( count( $category_types ) > 1 ) {
+			$type_labels = array();
+			foreach ( $category_types as $t ) {
+				$type_labels[] = Pds_Db_Seating_Planner_Boats::layout( $t )['label'];
+			}
+			$category_conflict_notice = sprintf(
+				'This event is tagged as both %s. Showing the %s layout — remove one category to switch (an empty plan switches automatically; a plan with paddlers keeps its layout).',
+				implode( ' and ', $type_labels ),
+				$layout['label']
+			);
 		}
 
 		include plugin_dir_path( __FILE__ ) . 'partials/pds-db-seating-planner-admin-display.php';

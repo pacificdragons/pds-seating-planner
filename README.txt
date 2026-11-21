@@ -1,14 +1,14 @@
-=== Plugin Name ===
-Contributors: (this should be a list of wordpress.org userid's)
+=== PD Seat Planner ===
+Contributors: sidouglas
 Donate link: https://pacificdragons.com.au/
-Tags: comments, spam
-Requires at least: 3.0.1
-Tested up to: 3.4
-Stable tag: 4.3
+Tags: seating, dragon-boat, outrigger, oc6, events-manager
+Requires at least: 5.0
+Tested up to: 6.8
+Stable tag: 1.8.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Here is a short description of the plugin.  This should be no more than 150 characters.  No markup here.
+Lets session leads arrange the seating of paddlers in Dragon Boats and OC6 canoes, on the Events Manager event.
 
 == Description ==
 
@@ -67,12 +67,19 @@ directory take precedence. For example, `/assets/screenshot-1.png` would win ove
 
 == Changelog ==
 
-= 1.0 =
-* A change since the previous version.
-* Another change.
+= 1.8.0 =
+* Renamed to "Seat Planner" — now supports OC6 outrigger canoes alongside Dragon Boats.
+* Layout is chosen from the event category (dragon-boat / oc6); a populated plan keeps its own layout if the event is re-categorised. Events tagged both show the Dragon Boat layout with a notice.
+* OC6 boards are a single file of 6 seats (seat 6 steers), no weights overlay or Boat Load (weight is irrelevant for OC6).
+* Default boat count scales to the crew: one boat per capacity, rounded up (OC6 6, Dragon Boat 21).
+* Boats can be named (free text per boat, shown with 2+ boats) with a number badge; the Empty control is now a trashcan icon.
+* Public event-page render for both boat types, with per-boat name/number headings; OC6 renders as neutral-grey seat boxes (no port/starboard colour). Draft plans stay hidden from non-coaches.
 
-= 0.5 =
-* List versions from most recent at top to oldest at bottom.
+= 1.7.3 =
+* Fixed mobile touch bugs: swap no longer dumps the dragged paddler into the available list; tapping the remove (x) no longer removes twice. Added a Playwright touch-interaction suite.
+
+= 1.7.0 - 1.7.2 =
+* Multi-ticket bookings seat as one seat per space; guest seats inherit the member's weight; removed the coaching-notes textarea (superseded by the coaching-plans CPT).
 
 == Upgrade Notice ==
 

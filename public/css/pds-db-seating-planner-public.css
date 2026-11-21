@@ -190,6 +190,60 @@
 	background: #c8e6c9;
 }
 
+/* ---- Per-boat heading (custom name, else "Boat N") ---- */
+.pds-boat-heading {
+	margin: 0 0 12px;
+	padding-bottom: 6px;
+	border-bottom: 2px solid #ddd;
+	font-size: 14px;
+	font-weight: bold;
+	color: #333;
+	text-align: center;
+}
+
+/* ---- OC6 single-file layout: one column of 6 seats (seat 6 steers), no
+   left/right. Same boxy style as Dragon Boat — a single green colour stands in
+   for the red/green sides. ---- */
+.oc6-boat {
+	max-width: 340px;
+}
+
+.oc6-boat .paddlers-section {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	grid-template-rows: none;
+	gap: 8px;
+}
+
+.oc6-row {
+	justify-content: center;
+	width: 100%;
+	max-width: 300px;
+	gap: 10px;
+}
+
+.oc6-row .paddler-position {
+	flex: 1;
+	max-width: 230px;
+}
+
+/* Neutral grey seats — OC6 has no port/starboard, so no red/green (those carry
+   a side meaning). Boxes, not pills; filled seats get a slightly darker fill. */
+.oc6-boat .oc6-seat.paddler-position {
+	border-color: #8a8a8a;
+	background: #f6f6f6;
+}
+
+.oc6-boat .oc6-seat.paddler-position .paddler-name {
+	color: #333;
+}
+
+.oc6-boat .oc6-seat.paddler-position:has(.paddler-name) {
+	background: #e4e4e4;
+	border-color: #666;
+}
+
 /* Mobile responsive styles */
 @media (max-width: 768px) {
 	#pds-seating-planner-public {

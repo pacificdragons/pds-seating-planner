@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>seat planner OC6 empty-plan fixture</title>
+<!--
+  OC6 fixture with NO saved plan and 18 available paddlers, to exercise the
+  default-boat-count rule (one canoe per 6 paddlers, rounded up => 3 boats).
+  Keep the boat-template / #pds-boat-config in sync with the partial's OC6 branch.
+-->
+<script>
+  document.ontouchstart = null;
+  document.ontouchmove = null;
+  document.ontouchend = null;
+</script>
+<link rel="stylesheet" href="/admin/css/pds-db-seating-planner-admin.css" />
+<style>
+  .dashicons { display: inline-block; width: 1em; height: 1em; }
+</style>
+<script src="/tests/vendor/jquery.min.js"></script>
+<script src="/tests/vendor/jquery-ui.min.js"></script>
+<script src="/tests/vendor/jquery.ui.touch-punch.min.js"></script>
+</head>
+<body>
+<div id="pds-seating-planner-app">
+  <div class="seating-controls" style="margin-bottom:20px;">
+    <h4>Available Paddlers</h4>
+    <div id="available-paddlers">
+      <div class="paddler-item" draggable="true" data-user-id="1" data-gender="male">P 1</div>
+      <div class="paddler-item" draggable="true" data-user-id="2" data-gender="female">P 2</div>
+      <div class="paddler-item" draggable="true" data-user-id="3" data-gender="male">P 3</div>
+      <div class="paddler-item" draggable="true" data-user-id="4" data-gender="female">P 4</div>
+      <div class="paddler-item" draggable="true" data-user-id="5" data-gender="male">P 5</div>
+      <div class="paddler-item" draggable="true" data-user-id="6" data-gender="female">P 6</div>
+      <div class="paddler-item" draggable="true" data-user-id="7" data-gender="male">P 7</div>
+      <div class="paddler-item" draggable="true" data-user-id="8" data-gender="female">P 8</div>
+      <div class="paddler-item" draggable="true" data-user-id="9" data-gender="male">P 9</div>
+      <div class="paddler-item" draggable="true" data-user-id="10" data-gender="female">P 10</div>
+      <div class="paddler-item" draggable="true" data-user-id="11" data-gender="male">P 11</div>
+      <div class="paddler-item" draggable="true" data-user-id="12" data-gender="female">P 12</div>
+      <div class="paddler-item" draggable="true" data-user-id="13" data-gender="male">P 13</div>
+      <div class="paddler-item" draggable="true" data-user-id="14" data-gender="female">P 14</div>
+      <div class="paddler-item" draggable="true" data-user-id="15" data-gender="male">P 15</div>
+      <div class="paddler-item" draggable="true" data-user-id="16" data-gender="female">P 16</div>
+      <div class="paddler-item" draggable="true" data-user-id="17" data-gender="male">P 17</div>
+      <div class="paddler-item" draggable="true" data-user-id="18" data-gender="female">P 18</div>
+    </div>
+  </div>
+
+  <div class="dragon-boat-layout" style="background:#f9f9f9;padding:20px;border-radius:8px;">
+    <div class="seating-scale-controls">
+      <label for="seating-scale">Scale</label>
+      <input type="range" id="seating-scale" min="25" max="100" step="5" value="100" autocomplete="off" />
+      <span id="seating-scale-value">100%</span>
+      <button type="button" id="seating-scale-reset" class="button button-small">Reset</button>
+    </div>
+    <div id="boats-container" class="boats-container"></div>
+  </div>
+
+  <div class="action-buttons">
+    <div id="global-controls"></div>
+    <button type="button" id="toggle-draft-mode" class="button"><span id="draft-button-label">Set as Draft</span></button>
+    <button type="button" id="save-seating-plan" class="button button-primary">Save</button>
+    <div id="draft-status"></div>
+    <div id="save-status"></div>
+  </div>
+
+  <input type="hidden" name="seating_plan_data" id="seating-plan-data" value="" />
+  <input type="hidden" id="paddler-genders" value="{}" />
+  <input type="hidden" id="pds-boat-config"
+    value='{"type":"oc6","boatCapacity":6,"showWeights":false,"showBoatLoad":false,"positionLabels":{"seat-1":"1","seat-2":"2","seat-3":"3","seat-4":"4","seat-5":"5","seat-6":"Steerer"}}' />
+
+  <template id="boat-template">
+    <div class="boat-container oc6-boat" data-boat="">
+      <div class="boat-header">
+        <span class="boat-number" aria-hidden="true"></span><input type="text" class="boat-name-input" maxlength="60" autocomplete="off" aria-label="Boat name" />
+        <div class="boat-controls">
+          <button type="button" class="button button-small empty-single-boat" data-boat="" title="Empty this boat" aria-label="Empty this boat"><span class="dashicons dashicons-trash"></span></button>
+        </div>
+      </div>
+      <div class="paddlers-section oc6-seats">
+        <div class="paddler-row oc6-row"><div class="row-number">1</div><div class="position paddler-position" data-position="seat-1" data-boat=""><span class="position-label">1</span></div></div>
+        <div class="paddler-row oc6-row"><div class="row-number">2</div><div class="position paddler-position" data-position="seat-2" data-boat=""><span class="position-label">2</span></div></div>
+        <div class="paddler-row oc6-row"><div class="row-number">3</div><div class="position paddler-position" data-position="seat-3" data-boat=""><span class="position-label">3</span></div></div>
+        <div class="paddler-row oc6-row"><div class="row-number">4</div><div class="position paddler-position" data-position="seat-4" data-boat=""><span class="position-label">4</span></div></div>
+        <div class="paddler-row oc6-row"><div class="row-number">5</div><div class="position paddler-position" data-position="seat-5" data-boat=""><span class="position-label">5</span></div></div>
+      </div>
+      <div class="steersperson-section">
+        <div class="position steersperson-position" data-position="seat-6" data-boat=""><span class="position-label">Steerer</span></div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<script src="/tests/harness.js"></script>
+<script src="/admin/js/pds-db-seating-planner-admin.js"></script>
+</body>
+</html>

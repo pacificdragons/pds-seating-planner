@@ -119,6 +119,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	gap: 8px;
 	margin-bottom: 15px;
 	padding-bottom: 8px;
 	border-bottom: 2px solid #ddd;
@@ -130,6 +131,64 @@
 	font-size: calc(16px * var(--sp-scale));
 	font-weight: bold;
 	flex: 1;
+}
+
+/* Boat number badge at the start of each boat header. Present only with 2+
+   boats, so a named boat still shows its ordinal — which is what the global
+   "Remove Boat N" control and the per-boat trash refer to. */
+#pds-seating-planner-app .boat-number {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 24px;
+	height: 24px;
+	padding: 0 7px;
+	box-sizing: border-box;
+	background: #1d2327;
+	color: #fff;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1;
+	border-radius: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Editable boat name — reads as the boat's title until focused, then shows as
+   a normal field. Only rendered when there are 2+ boats. Sized to match the
+   adjacent trashcan (.button-small, 24px). WordPress admin forms.css forces a
+   40px min-height on text inputs via a higher-specificity selector, so the
+   height is pinned with !important and the app-id prefix to win that fight. */
+#pds-seating-planner-app .boat-name-input {
+	flex: 1;
+	min-width: 0;
+	height: 24px !important;
+	min-height: 24px !important;
+	margin: 0;
+	padding: 0 8px;
+	color: #333;
+	font-size: 13px;
+	font-weight: bold;
+	line-height: normal;
+	background: #fff;
+	border: 1px solid #8c8f94;
+	border-radius: 4px;
+	box-sizing: border-box;
+}
+
+.boat-name-input::placeholder {
+	color: #8c8f94;
+	font-weight: normal;
+}
+
+.boat-name-input:hover {
+	border-color: #646970;
+}
+
+.boat-name-input:focus {
+	border-color: #2271b1;
+	outline: none;
+	box-shadow: 0 0 0 1px #2271b1;
 }
 
 .boat-controls {
@@ -151,6 +210,22 @@
 	margin-right: 4px;
 	vertical-align: middle;
 	line-height: 1;
+}
+
+/* The per-boat empty control is icon-only (a trashcan). Centre the glyph in the
+   small button. The app-id prefix is needed to outrank WordPress's own
+   `.wp-core-ui .button` (two classes), which otherwise forces display:block and
+   leaves the icon sitting at the top of the button. */
+#pds-seating-planner-app .empty-single-boat {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+#pds-seating-planner-app .empty-single-boat .dashicons {
+	margin-right: 0;
+	line-height: 1;
+	vertical-align: middle;
 }
 
 /* Drummer and steersperson sections */
@@ -223,6 +298,34 @@
 	flex-shrink: 0;
 	min-width: calc(20px * var(--sp-scale));
 	text-align: center;
+}
+
+/* ---- OC6 single-file layout -----------------------------------------
+ * OC6 is one line of 6 seats (seat 6 steers). It reuses the shared .position /
+ * .paddler-position drag targets but stacks them vertically and centred instead
+ * of the Dragon Boat's paired left/right grid. */
+.oc6-boat {
+	max-width: calc(360px * var(--sp-scale));
+	min-width: calc(220px * var(--sp-scale));
+}
+
+.paddlers-section.oc6-seats {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	grid-template-rows: none;
+	gap: calc(8px * var(--sp-scale));
+}
+
+.oc6-row {
+	justify-content: center;
+	width: 100%;
+	max-width: calc(260px * var(--sp-scale));
+}
+
+.oc6-row .paddler-position {
+	flex: 1;
+	max-width: calc(180px * var(--sp-scale));
 }
 
 /* Position states */
@@ -514,7 +617,8 @@
 		align-items: stretch;
 	}
 
-	.boat-title {
+	.boat-title,
+	.boat-name-input {
 		font-size: calc(15px * var(--sp-scale));
 		text-align: center;
 	}

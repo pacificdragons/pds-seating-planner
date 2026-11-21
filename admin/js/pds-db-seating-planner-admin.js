@@ -12,6 +12,26 @@
     // Only initialize if we're on a page with the seating planner
     if ($("#pds-seating-planner-app").length === 0) return;
 
+    // Boat-type config injected by the server (type, per-boat capacity, whether
+    // the weights overlay / Boat Load apply, and the position => label map). The
+    // defaults describe a Dragon Boat so this file still works against the older
+    // test fixture, which has no #pds-boat-config input.
+    var boatConfig = {
+      type: "dragon",
+      boatCapacity: 21,
+      showWeights: true,
+      showBoatLoad: true,
+      positionLabels: {},
+    };
+    try {
+      var rawBoatConfig = $("#pds-boat-config").val();
+      if (rawBoatConfig) {
+        boatConfig = $.extend(boatConfig, JSON.parse(rawBoatConfig) || {});
+      }
+    } catch (e) {
+      // Keep the Dragon Boat defaults on a malformed config.
+    }
+
     var seatingData = {
       boats: [],
       metadata: {
@@ -19,7 +39,14 @@
       },
     };
     var totalPaddlers = $(".paddler-item").length;
-    var defaultBoatCount = totalPaddlers > 20 ? 2 : 1;
+    // Open with enough boats to seat everyone: one boat per boatCapacity
+    // paddlers, rounded up (18 OC6 paddlers => 3 canoes; <=21 Dragon Boat
+    // paddlers => 1 boat; 22-42 => 2). A saved plan's own boatCount wins over
+    // this (see resolveInitialBoatCount), so it only drives a brand-new plan.
+    var defaultBoatCount = Math.max(
+      1,
+      Math.ceil(totalPaddlers / boatConfig.boatCapacity)
+    );
     var actualBoatCount = defaultBoatCount;
     var boatCount = actualBoatCount;
 
@@ -75,8 +102,13 @@
     // Whether the weight/balance overlay is shown. A per-user view preference
     // (like the scale control), remembered in localStorage — never part of the
     // saved plan. Default off so the grid is unchanged until asked for.
+    // The "show weights" preference is remembered in localStorage and SHARED
+    // across every event in wp-admin. It must additionally be gated on the boat
+    // type: OC6 has no weight concept and no toggle to switch it off, so an admin
+    // who left weights on for a Dragon Boat must not have the overlay leak onto
+    // an OC6 board.
     var WEIGHTS_STORAGE_KEY = "pdsSeatingShowWeights";
-    var weightsVisible = readShowWeights();
+    var weightsVisible = boatConfig.showWeights && readShowWeights();
 
     // Backwards compatibility: ensure metadata exists and has isDraft
     if (!seatingData.metadata) {
@@ -86,6 +118,26 @@
       seatingData.metadata.isDraft = false;
     }
 
+    // metadata.boatNames maps a boat index to its custom name. WordPress's
+    // json_decode(..., true) + wp_json_encode on save turns a sparse object into
+    // a JSON array ({"0":"A"} -> ["A"], {} -> []), so normalise whatever shape
+    // comes back into a plain object keyed by index, keeping only non-empty
+    // names. Only ever read by index after this — never iterate, since a `delete`
+    // on the array form would leave holes.
+    (function normaliseBoatNames() {
+      var raw = seatingData.metadata.boatNames;
+      var names = {};
+      if (raw && typeof raw === "object") {
+        Object.keys(raw).forEach(function (k) {
+          var v = raw[k];
+          if (typeof v === "string" && v.trim() !== "") {
+            names[k] = v;
+          }
+        });
+      }
+      seatingData.metadata.boatNames = names;
+    })();
+
     // Determine actual boat count from the generic boatCount model, falling
     // back to the legacy boat2Visible flag and finally the paddler-count default.
     actualBoatCount = resolveInitialBoatCount();
@@ -94,6 +146,12 @@
     seatingData.metadata.boatCount = actualBoatCount;
     // Keep the legacy flag in sync for any older reader still checking it.
     seatingData.metadata.boat2Visible = actualBoatCount >= 2;
+    // Stamp the boat type so the saved plan self-describes its layout: the public
+    // render and any later re-open resolve the layout from this (a populated plan
+    // keeps its own type even if the event is re-categorised). Set at init — not
+    // just in the Save handler — so the WordPress "Update" button path, which
+    // persists the hidden input via save_post, also carries the type.
+    seatingData.metadata.type = boatConfig.type;
 
     // Initialize boats
     initializeBoats(actualBoatCount);
@@ -120,6 +178,10 @@
 
     // Update global reference for other functions
     boatCount = actualBoatCount;
+
+    // Sync the hidden input now so the metadata stamped above (type, boatCount)
+    // is saved even if the operator hits WordPress "Update" without dragging.
+    $("#seating-plan-data").val(JSON.stringify(seatingData));
 
     // Initialise draft button UI to match loaded state
     updateDraftButton();
@@ -162,14 +224,23 @@
       var boatContainer = clone.querySelector(".boat-container");
       boatContainer.setAttribute("data-boat", boatIndex);
 
-      var boatTitleElement = clone.querySelector(".boat-title");
+      var nameInput = clone.querySelector(".boat-name-input");
 
       if (totalBoats > 1) {
-        // Multiple boats - show title and empty button
-        var boatTitle = "Boat " + (boatIndex + 1);
-        boatTitleElement.textContent = boatTitle;
+        // Multiple boats - show the boat number (so "Remove Boat N" and a named
+        // boat still line up), the editable name field (placeholder "Boat N",
+        // pre-filled with any saved custom name) and the per-boat empty button.
+        var boatNumber = clone.querySelector(".boat-number");
+        if (boatNumber) {
+          boatNumber.textContent = boatIndex + 1;
+        }
+        if (nameInput) {
+          nameInput.placeholder = "Boat " + (boatIndex + 1);
+          var names = seatingData.metadata.boatNames || {};
+          nameInput.value = names[boatIndex] ? names[boatIndex] : "";
+        }
       } else {
-        // Single boat - remove the header entirely
+        // Single boat - remove the header entirely (no name field for a lone boat).
         var boatHeader = clone.querySelector(".boat-header");
         if (boatHeader) {
           boatHeader.remove();
@@ -223,7 +294,7 @@
       if (count === 1) {
         globalControls.append(
           '<button type="button" id="empty-boat" class="button button-secondary" style="margin: 5px;">' +
-            '<span class="dashicons dashicons-dismiss" style="margin-right: 5px;"></span>Empty Boat' +
+            '<span class="dashicons dashicons-trash" style="margin-right: 5px;"></span>Empty Boat' +
             "</button>"
         );
       }
@@ -585,6 +656,13 @@
     }
 
     function getPositionLabel(position) {
+      // Prefer the server-supplied label map so the placeholder a cleared seat
+      // restores matches its template exactly, for any boat type (e.g. OC6's
+      // seat-6 => "Steerer", seat-1 => "1").
+      if (boatConfig.positionLabels && boatConfig.positionLabels[position]) {
+        return boatConfig.positionLabels[position];
+      }
+      // Legacy fallback (also covers the older test fixture with no config).
       if (position === "drummer") return "Drummer";
       if (position === "steersperson") return "Steerer";
       // Handle position formats like "left-1", "right-2", etc.
@@ -674,6 +752,37 @@
           }, 3000);
         },
       });
+    });
+
+    // Editable boat name (only rendered when there are 2+ boats). Persist on
+    // every keystroke into metadata.boatNames so the WordPress "Update" button
+    // path (which saves the hidden field via save_post) carries the name even if
+    // the operator never clicks "Save Seating Plan". Delegated because boats are
+    // rebuilt on add/remove.
+    $(document).on("input", ".boat-name-input", function () {
+      var boatIndex = $(this).closest(".boat-container").attr("data-boat");
+      if (typeof boatIndex === "undefined") {
+        return;
+      }
+      var val = $(this).val().trim();
+      if (!seatingData.metadata.boatNames) {
+        seatingData.metadata.boatNames = {};
+      }
+      if (val) {
+        seatingData.metadata.boatNames[boatIndex] = val;
+      } else {
+        delete seatingData.metadata.boatNames[boatIndex];
+      }
+      updateSeatingDataInput();
+    });
+
+    // This is the first (and only) text input in the metabox, so a bare Enter
+    // would trigger the classic-editor form's implicit submit and reload the
+    // page mid-edit. Swallow it — the name is already saved on input.
+    $(document).on("keydown", ".boat-name-input", function (e) {
+      if (e.key === "Enter" || e.keyCode === 13) {
+        e.preventDefault();
+      }
     });
 
     // Draft toggle button click handler
@@ -892,6 +1001,12 @@
 
       if (seatingData.boats.length > boatCount) {
         seatingData.boats.splice(boatCount);
+      }
+
+      // Forget the removed boat's custom name so a later re-added boat at this
+      // index starts blank. Lower-indexed boats keep their names.
+      if (seatingData.metadata.boatNames) {
+        delete seatingData.metadata.boatNames[lastIndex];
       }
 
       // Rebuild so the remaining boats get the correct titles/headers (e.g.

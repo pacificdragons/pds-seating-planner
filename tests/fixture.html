@@ -72,9 +72,9 @@
   <template id="boat-template">
     <div class="boat-container" data-boat="">
       <div class="boat-header">
-        <h5 class="boat-title"></h5>
+        <span class="boat-number" aria-hidden="true"></span><input type="text" class="boat-name-input" maxlength="60" autocomplete="off" aria-label="Boat name" />
         <div class="boat-controls">
-          <button type="button" class="button button-small empty-single-boat" data-boat=""><span class="dashicons dashicons-dismiss"></span> Empty</button>
+          <button type="button" class="button button-small empty-single-boat" data-boat="" title="Empty this boat" aria-label="Empty this boat"><span class="dashicons dashicons-trash"></span></button>
         </div>
       </div>
       <div class="drummer-section">

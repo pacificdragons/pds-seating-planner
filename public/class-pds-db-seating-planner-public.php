@@ -166,6 +166,14 @@ class Pds_Db_Seating_Planner_Public {
 			return '';
 		}
 
+		// Resolve which layout to render (same rule as the admin metabox: a
+		// populated plan keeps its stored type; an empty plan follows the event
+		// category; falls back to Dragon Boat).
+		$boat_type = Pds_Db_Seating_Planner_Boats::resolve_type(
+			$seating_decoded,
+			Pds_Db_Seating_Planner_Boats::category_type( (int) $atts['event_id'] )
+		);
+
 		// Start output buffering
 		ob_start();
 

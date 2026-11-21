@@ -20,6 +20,12 @@
 		</div>
 	<?php endif; ?>
 
+	<?php if ( ! empty( $category_conflict_notice ) ) : ?>
+		<div class="notice notice-warning inline" style="margin: 0 0 15px;">
+			<p><strong>Two boat categories:</strong> <?php echo esc_html( $category_conflict_notice ); ?></p>
+		</div>
+	<?php endif; ?>
+
 	<div class="seating-controls" style="margin-bottom: 20px;">
 		<h4>Available Paddlers</h4>
 		<div id="available-paddlers">
@@ -59,10 +65,12 @@
 			<span id="seating-scale-value">100%</span>
 			<button type="button" id="seating-scale-reset" class="button button-small">Reset</button>
 
+			<?php if ( ! empty( $layout['show_weights'] ) ) : ?>
 			<label class="sp-weights-toggle" for="toggle-weights" title="Show each paddler's weight and the lateral (left vs right) balance. Admin only — never shown on the front end.">
 				<input type="checkbox" id="toggle-weights" autocomplete="off" />
 				Show weights
 			</label>
+			<?php endif; ?>
 		</div>
 
 		<div id="boats-container" class="boats-container">
@@ -83,10 +91,12 @@
 		<div id="global-controls">
 			<!-- Global controls will be shown/hidden based on boat count -->
 		</div>
+		<?php if ( ! empty( $layout['show_boat_load'] ) ) : ?>
 		<button type="button" id="boat-load" class="button button-secondary" style="margin-right: 10px;">
 			<span class="dashicons dashicons-groups" style="margin-right: 5px;"></span>
 			Boat Load
 		</button>
+		<?php endif; ?>
 		<button type="button" id="toggle-draft-mode" class="button button-secondary" style="margin-right: 10px;">
 			<span class="dashicons dashicons-hidden" style="margin-right: 5px;"></span>
 			<span id="draft-button-label">Set as Draft</span>
@@ -114,10 +124,19 @@
 	<input type="hidden" id="paddler-genders" value="<?php echo esc_attr( wp_json_encode( (object) $paddler_genders ) ); ?>" />
 
 	<?php
+	// Boat-type config (layout, capacity, weights/Boat-Load flags, position label
+	// map) consumed by the admin JS. Defines the seat geometry in one place so the
+	// JS hard-codes none of it. See Pds_Db_Seating_Planner_Boats::js_config().
+	?>
+	<input type="hidden" id="pds-boat-config" value="<?php echo esc_attr( wp_json_encode( $boat_config ) ); ?>" />
+
+	<?php if ( ! empty( $layout['show_weights'] ) ) : ?>
+	<?php
 	// A userId => weight (kg) map for confirmed paddlers who have a weight on
 	// file, so the JS can render each seat's weight and the lateral balance.
 	// Paddlers with no weight are simply omitted (rendered as unknown). This is
-	// admin-only data and is never persisted into the seating plan.
+	// admin-only data and is never persisted into the seating plan. Only emitted
+	// for layouts where weight matters (Dragon Boat) — never for OC6.
 	$paddler_weights = array();
 	foreach ( $event_users as $u ) {
 		if ( isset( $u->weight ) && null !== $u->weight ) {
@@ -136,15 +155,53 @@
 	// profile.php when the id is the current user, so it is safe for everyone.
 	?>
 	<input type="hidden" id="paddler-edit-base" value="<?php echo esc_attr( admin_url( 'user-edit.php' ) ); ?>" />
+	<?php endif; ?>
 
-	<!-- Boat template -->
+	<!-- Boat template (geometry per boat type; see Pds_Db_Seating_Planner_Boats) -->
+	<?php if ( 'oc6' === $boat_type ) : ?>
+	<template id="boat-template">
+		<div class="boat-container oc6-boat" data-boat="">
+			<div class="boat-header">
+				<span class="boat-number" aria-hidden="true"></span>
+				<input type="text" class="boat-name-input" maxlength="60" autocomplete="off" aria-label="Boat name" />
+				<div class="boat-controls">
+					<button type="button" class="button button-small empty-single-boat" data-boat="" title="Empty this boat" aria-label="Empty this boat">
+						<span class="dashicons dashicons-trash"></span>
+					</button>
+				</div>
+			</div>
+			<div class="paddlers-section oc6-seats">
+				<?php foreach ( $boat_positions as $pos ) : ?>
+					<?php if ( 'seat' === $pos['role'] ) : ?>
+					<div class="paddler-row oc6-row">
+						<div class="row-number"><?php echo esc_html( $pos['label'] ); ?></div>
+						<div class="position paddler-position" data-position="<?php echo esc_attr( $pos['key'] ); ?>" data-boat="">
+							<span class="position-label"><?php echo esc_html( $pos['label'] ); ?></span>
+						</div>
+					</div>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</div>
+			<?php foreach ( $boat_positions as $pos ) : ?>
+				<?php if ( 'steerer' === $pos['role'] ) : ?>
+				<div class="steersperson-section">
+					<div class="position steersperson-position" data-position="<?php echo esc_attr( $pos['key'] ); ?>" data-boat="">
+						<span class="position-label"><?php echo esc_html( $pos['label'] ); ?></span>
+					</div>
+				</div>
+				<?php endif; ?>
+			<?php endforeach; ?>
+		</div>
+	</template>
+	<?php else : ?>
 	<template id="boat-template">
 		<div class="boat-container" data-boat="">
 			<div class="boat-header">
-				<h5 class="boat-title"></h5>
+				<span class="boat-number" aria-hidden="true"></span>
+				<input type="text" class="boat-name-input" maxlength="60" autocomplete="off" aria-label="Boat name" />
 				<div class="boat-controls">
-					<button type="button" class="button button-small empty-single-boat" data-boat="">
-						<span class="dashicons dashicons-dismiss"></span> Empty
+					<button type="button" class="button button-small empty-single-boat" data-boat="" title="Empty this boat" aria-label="Empty this boat">
+						<span class="dashicons dashicons-trash"></span>
 					</button>
 				</div>
 			</div>
@@ -173,6 +230,7 @@
 			</div>
 		</div>
 	</template>
+	<?php endif; ?>
 
 	<!--
 		Global controls (Empty Boat / Add boat / Remove last boat) are built

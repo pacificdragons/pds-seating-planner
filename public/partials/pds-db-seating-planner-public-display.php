@@ -52,9 +52,11 @@ $pds_boat_names = ( isset( $seating_data_decoded['metadata']['boatNames'] ) && i
 				<h6 class="pds-boat-heading"><?php echo esc_html( $pds_heading ); ?></h6>
 
 				<?php if ( 'oc6' === $pds_boat_type ) : ?>
-				<!-- OC6: a single file of 6 seats (seat 6 steers). No left/right. -->
+				<!-- OC6: a single file of 6 numbered seats. Seat 6 steers, but that
+				     is a known convention, so it renders as a plain row 6 — no
+				     separate steerer box and no special styling. No left/right. -->
 				<div class="paddlers-section oc6-seats">
-					<?php for ( $seat = 1; $seat <= 5; $seat++ ) :
+					<?php for ( $seat = 1; $seat <= 6; $seat++ ) :
 						$seat_key = 'seat-' . $seat;
 					?>
 					<div class="paddler-row oc6-row">
@@ -68,15 +70,6 @@ $pds_boat_names = ( isset( $seating_data_decoded['metadata']['boatNames'] ) && i
 						</div>
 					</div>
 					<?php endfor; ?>
-				</div>
-				<div class="steersperson-section">
-					<div class="position steersperson-position oc6-seat">
-						<?php if ( isset( $boat_data['seat-6'] ) && ! empty( $boat_data['seat-6']['userName'] ) ) : ?>
-							<span class="paddler-name"><?php echo esc_html( $boat_data['seat-6']['userName'] ); ?></span>
-						<?php else : ?>
-							<span class="position-label">Steerer</span>
-						<?php endif; ?>
-					</div>
 				</div>
 
 				<?php else : ?>

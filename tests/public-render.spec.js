@@ -32,7 +32,7 @@ async function styled(page, html) {
 }
 
 test.describe('public render — structure', () => {
-  test('OC6: single-file seats + steerer + custom boat name, no left/right', () => {
+  test('OC6: six numbered seats incl. seat 6, custom boat name, no left/right', () => {
     const plan = {
       boats: [{ 'seat-1': { userId: 5, userName: 'Alice' }, 'seat-6': { userId: 6, userName: 'Bob' } }],
       metadata: { type: 'oc6', boatNames: ['Crew A'] },
@@ -40,9 +40,11 @@ test.describe('public render — structure', () => {
     const html = renderPublic(plan, 'oc6');
     expect(html).toContain('boat-container oc6-boat');
     expect(html).toContain('>Crew A<'); // heading = custom name
-    expect(html).toContain('Alice');
-    expect(html).toContain('Bob');
-    expect(html).toContain('steersperson-section'); // seat 6 steers
+    expect(html).toContain('Alice'); // seat 1
+    expect(html).toContain('Bob'); // seat 6, rendered inline
+    // Seat 6 is a plain numbered row now, not a separate steerer box.
+    expect(html).not.toContain('steersperson-section');
+    expect((html.match(/paddler-row oc6-row/g) || []).length).toBe(6);
     expect(html).not.toContain('left-position');
     expect(html).not.toContain('right-position');
     expect(html).not.toContain('drummer');
@@ -97,5 +99,33 @@ test.describe('public render — styling (grey, boxes, not pills)', () => {
     await styled(page, renderPublic(plan, 'dragon'));
     const seat = page.locator('.right-position').first();
     await expect(seat).toHaveCSS('background-color', 'rgb(200, 230, 201)'); // #c8e6c9 green
+  });
+});
+
+test.describe('public render — OC6 compact grid (2-up on mobile)', () => {
+  // The project viewport is Pixel 5 (393px). A real theme page carries a
+  // width=device-width viewport meta, so we add it here — without it an
+  // emulated mobile falls back to a 980px layout width and the grid wouldn't
+  // reflect what a phone actually shows.
+  test('three OC6 boats lay out two per row at phone width', async ({ page }) => {
+    const plan = {
+      boats: [
+        { 'seat-1': { userName: 'A' } },
+        { 'seat-1': { userName: 'B' } },
+        { 'seat-1': { userName: 'C' } },
+      ],
+      metadata: { type: 'oc6' },
+    };
+    const html = renderPublic(plan, 'oc6');
+    await page.setContent(
+      `<!doctype html><html><head><meta charset="utf-8">` +
+        `<meta name="viewport" content="width=device-width, initial-scale=1">` +
+        `<style>${PUBLIC_CSS}</style></head><body>${html}</body></html>`
+    );
+    const cols = await page
+      .locator('.is-oc6 .boats-container')
+      .evaluate((el) => getComputedStyle(el).gridTemplateColumns);
+    // Two concrete track widths => two boats per row.
+    expect(cols.trim().split(/\s+/)).toHaveLength(2);
   });
 });

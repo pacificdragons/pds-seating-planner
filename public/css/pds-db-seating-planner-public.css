@@ -201,31 +201,83 @@
 	text-align: center;
 }
 
-/* ---- OC6 single-file layout: one column of 6 seats (seat 6 steers), no
-   left/right. Same boxy style as Dragon Boat — a single green colour stands in
-   for the red/green sides. ---- */
-.oc6-boat {
-	max-width: 340px;
+/* ---- OC6 compact grid: single-file boats (6 numbered seats, seat 6 steers)
+   flow into a grid rather than taking a full-width row each — 2-up on a phone,
+   as many as fit (capped) on wider screens. The layout rules are scoped to
+   `.is-oc6` so they beat the shared mobile media-query rules below on
+   specificity (0,2,0 vs 0,1,0) regardless of source order, and leave the
+   Dragon Boat layout untouched. ---- */
+.is-oc6 .boats-container {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 18px 10px;
+	align-items: start;
+}
+
+/* Undo the flex-era boat sizing (min-width:300px/flex:1/max-width:340) and the
+   mobile full-width override so boats sit two-across on a phone. Two deliberate
+   choices above: the track max is 1fr (not a fixed length) so auto-fit counts
+   repetitions by the 140px min — a ~360px phone always gets two columns (a
+   fixed max would be counted by its own width and collapse to one). And auto-fit
+   (not auto-fill) collapses empty tracks, so a single-boat plan centres instead
+   of clinging to the left. The boat width is capped here so wide screens keep
+   boats a sensible size. */
+.is-oc6 .boat-container {
+	min-width: 0;
+	width: 100%;
+	max-width: 190px;
+	margin: 0 auto;
+	padding: 0;
+}
+
+.is-oc6 .pds-boat-heading {
+	font-size: 13px;
+	margin-bottom: 8px;
+	padding-bottom: 4px;
 }
 
 .oc6-boat .paddlers-section {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
+	align-items: stretch;
 	grid-template-rows: none;
-	gap: 8px;
+	gap: 5px;
 }
 
-.oc6-row {
-	justify-content: center;
+.is-oc6 .oc6-row {
+	position: relative;
 	width: 100%;
-	max-width: 300px;
-	gap: 10px;
+	max-width: none;
+	gap: 0;
 }
 
-.oc6-row .paddler-position {
+/* Seat fills the column; the number sits as a faint badge inside the seat's
+   left edge (reclaiming the width the old number-circle column used). Height is
+   auto with a floor, so a two-line name wraps instead of clipping. */
+.is-oc6 .oc6-row .paddler-position.oc6-seat {
 	flex: 1;
-	max-width: 230px;
+	width: 100%;
+	max-width: none;
+	min-width: 0;
+	height: auto;
+	min-height: 32px;
+	padding: 4px 6px 4px 18px;
+	font-size: 11px;
+}
+
+.is-oc6 .oc6-row .row-number {
+	position: absolute;
+	left: 2px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 14px;
+	height: 14px;
+	min-width: 0;
+	padding: 0;
+	background: none;
+	color: #9a9a9a;
+	font-size: 10px;
+	border-radius: 0;
 }
 
 /* Neutral grey seats — OC6 has no port/starboard, so no red/green (those carry

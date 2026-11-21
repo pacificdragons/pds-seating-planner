@@ -440,23 +440,76 @@
       });
     }
 
+    // Track whether a touch that lands on a remove-× is actually the start of a
+    // chip drag rather than a tap. On mobile the chips render at ~25% scale and
+    // the × sits as a 16px target protruding from the chip corner (see the
+    // max-width:480px rule), so a finger grabbing a seated chip to drag it very
+    // often starts on the ×. touch-punch then runs the drag/drop, and the
+    // concluding `touchend` would otherwise fire the remove handler below and
+    // dump the just-dragged paddler back into the available list. Desktop is
+    // immune because a real drag never fires a `click`. We watch touch movement
+    // (threshold matches the draggable `distance: 5`) so a drag-ending touchend
+    // is ignored while a genuine tap (no movement) still removes the paddler.
+    var removeTouchMoved = false;
+    var removeTouchStartXY = null;
+    // Remembers the last paddler actually removed, to de-dupe the click+touchend
+    // pair a single tap fires (see the remove handler below).
+    var lastRemove = { userId: null, ts: 0 };
+    $(document).on("touchstart", ".remove-paddler", function (e) {
+      removeTouchMoved = false;
+      var t = e.originalEvent.touches[0];
+      removeTouchStartXY = t ? { x: t.clientX, y: t.clientY } : null;
+    });
+    $(document).on("touchmove", ".remove-paddler", function (e) {
+      if (!removeTouchStartXY) return;
+      var t = e.originalEvent.touches[0];
+      if (!t) return;
+      if (
+        Math.abs(t.clientX - removeTouchStartXY.x) > 5 ||
+        Math.abs(t.clientY - removeTouchStartXY.y) > 5
+      ) {
+        removeTouchMoved = true;
+      }
+    });
+
     // Handle click on remove button (×) - support both click and touch events for mobile
     $(document).on("click touchend", ".remove-paddler", function (e) {
       e.preventDefault();
       e.stopPropagation();
-      
-      // Prevent duplicate events from both click and touchend
-      if ($(this).data('removing')) {
+
+      // Ignore the touchend that concludes a chip drag (see the touch-move
+      // tracker above). Without this, swapping two seated paddlers on mobile
+      // sends the dragged paddler back to the available list.
+      if (e.type === "touchend" && removeTouchMoved) {
+        removeTouchMoved = false;
+        removeTouchStartXY = null;
         return;
       }
-      $(this).data('removing', true);
-      
+
+      // Resolve the paddler being removed first, so we can de-dupe on it.
       var positionElement = $(this).closest(".position");
       var position = positionElement.data("position");
       var boatIndex = positionElement.data("boat");
       var assignedPaddler = $(this).closest(".assigned-paddler");
       var userId = assignedPaddler.data("user-id");
       var userName = assignedPaddler.find(".paddler-name").text().trim();
+
+      if (typeof userId === "undefined" || userId === null || userId === "") {
+        return;
+      }
+
+      // A single tap fires BOTH `touchend` and a click — touch-punch synthesizes
+      // a click for a non-moved touch — so this handler runs twice for one tap.
+      // The previous guard stored a flag on the × element, but the first run
+      // removes that element via .html() and jQuery.cleanData wipes its data, so
+      // the second run saw no flag and returned the paddler to the available list
+      // a second time. De-dupe instead on the paddler just removed within a short
+      // window, which survives the element being destroyed.
+      var now = Date.now();
+      if (userId === lastRemove.userId && now - lastRemove.ts < 700) {
+        return;
+      }
+      lastRemove = { userId: userId, ts: now };
 
       // Add paddler back to available list
       var paddlerItem = $(
@@ -485,11 +538,6 @@
         delete seatingData.boats[boatIndex][position];
       }
       updateSeatingDataInput();
-      
-      // Clear the removing flag after a short delay to ensure proper event handling
-      setTimeout(function() {
-        $('.remove-paddler').removeData('removing');
-      }, 100);
     });
 
     function clearUserFromAllPositions(userId) {

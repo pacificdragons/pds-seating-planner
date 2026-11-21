@@ -1,0 +1,7 @@
+# Keep dev/test tooling out of the composer dist artifact that DeployHQ ships.
+# (Affects `git archive` / dist installs; harmless inert files otherwise.)
+/tests          export-ignore
+/playwright.config.js export-ignore
+/package.json   export-ignore
+/.gitignore     export-ignore
+/.gitattributes export-ignore

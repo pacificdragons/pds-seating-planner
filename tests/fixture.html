@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>seating planner test fixture</title>
+<!--
+  Test fixture for the admin drag/drop/touch behaviour. It loads the REAL
+  plugin CSS and JS (../admin/...), pinned jQuery / jQuery UI / touch-punch,
+  and a representative copy of the metabox markup from
+  admin/partials/pds-db-seating-planner-admin-display.php. Keep the markup
+  below in sync with that partial if its structure changes.
+
+  Two seats are pre-filled (left-1 = Alice/100, right-1 = Bob/200) so a
+  seat-to-seat swap can be exercised; three paddlers sit in the available list.
+-->
+<script>
+  // touch-punch decides whether to patch jQuery UI at load, keyed on touch
+  // support. Under Playwright's hasTouch context this is already true; this
+  // shim just lets the fixture also work if opened in a plain desktop browser.
+  document.ontouchstart = null;
+  document.ontouchmove = null;
+  document.ontouchend = null;
+</script>
+<link rel="stylesheet" href="/admin/css/pds-db-seating-planner-admin.css" />
+<style>
+  .dashicons { display: inline-block; width: 1em; height: 1em; }
+</style>
+<script src="/tests/vendor/jquery.min.js"></script>
+<script src="/tests/vendor/jquery-ui.min.js"></script>
+<script src="/tests/vendor/jquery.ui.touch-punch.min.js"></script>
+</head>
+<body>
+<div id="pds-seating-planner-app">
+  <div class="seating-controls" style="margin-bottom:20px;">
+    <h4>Available Paddlers</h4>
+    <div id="available-paddlers">
+      <div class="paddler-item" draggable="true" data-user-id="10" data-gender="male">Avail One</div>
+      <div class="paddler-item" draggable="true" data-user-id="11" data-gender="female">Avail Two</div>
+      <div class="paddler-item" draggable="true" data-user-id="12" data-gender="male">Avail Three</div>
+    </div>
+  </div>
+
+  <div class="dragon-boat-layout" style="background:#f9f9f9;padding:20px;border-radius:8px;">
+    <div class="seating-scale-controls">
+      <label for="seating-scale">Scale</label>
+      <input type="range" id="seating-scale" min="25" max="100" step="5" value="100" autocomplete="off" />
+      <span id="seating-scale-value">100%</span>
+      <button type="button" id="seating-scale-reset" class="button button-small">Reset</button>
+      <label class="sp-weights-toggle" for="toggle-weights">
+        <input type="checkbox" id="toggle-weights" autocomplete="off" /> Show weights
+      </label>
+    </div>
+    <div id="boats-container" class="boats-container"></div>
+  </div>
+
+  <div class="action-buttons">
+    <div id="global-controls"></div>
+    <button type="button" id="boat-load" class="button">Boat Load</button>
+    <button type="button" id="toggle-draft-mode" class="button"><span id="draft-button-label">Set as Draft</span></button>
+    <button type="button" id="save-seating-plan" class="button button-primary">Save</button>
+    <div id="draft-status"></div>
+    <div id="save-status"></div>
+  </div>
+
+  <input type="hidden" name="seating_plan_data" id="seating-plan-data"
+    value='{"boats":[{"left-1":{"userId":"100","userName":"Alice Seated"},"right-1":{"userId":"200","userName":"Bob Seated"}}],"metadata":{"boatCount":1,"isDraft":false}}' />
+  <input type="hidden" id="paddler-genders" value='{"10":"male","11":"female","12":"male","100":"female","200":"male"}' />
+  <input type="hidden" id="paddler-weights" value='{}' />
+  <input type="hidden" id="paddler-edit-base" value="about:blank" />
+
+  <template id="boat-template">
+    <div class="boat-container" data-boat="">
+      <div class="boat-header">
+        <h5 class="boat-title"></h5>
+        <div class="boat-controls">
+          <button type="button" class="button button-small empty-single-boat" data-boat=""><span class="dashicons dashicons-dismiss"></span> Empty</button>
+        </div>
+      </div>
+      <div class="drummer-section">
+        <div class="position drummer-position" data-position="drummer" data-boat=""><span class="position-label">Drummer</span></div>
+      </div>
+      <div class="paddlers-section">
+        <div class="paddler-row">
+          <div class="position paddler-position" data-position="left-1" data-boat=""><span class="position-label">L1</span></div>
+          <div class="row-number">1</div>
+          <div class="position paddler-position" data-position="right-1" data-boat=""><span class="position-label">R1</span></div>
+        </div>
+        <div class="paddler-row">
+          <div class="position paddler-position" data-position="left-2" data-boat=""><span class="position-label">L2</span></div>
+          <div class="row-number">2</div>
+          <div class="position paddler-position" data-position="right-2" data-boat=""><span class="position-label">R2</span></div>
+        </div>
+      </div>
+      <div class="steersperson-section">
+        <div class="position steersperson-position" data-position="steersperson" data-boat=""><span class="position-label">Steerer</span></div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<script src="/tests/harness.js"></script>
+<script src="/admin/js/pds-db-seating-planner-admin.js"></script>
+</body>
+</html>
